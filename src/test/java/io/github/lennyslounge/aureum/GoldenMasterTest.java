@@ -40,4 +40,10 @@ public class GoldenMasterTest {
         assertThat(receivedFile).exists();
         receivedFile.toFile().delete();
     }
+
+    @Test
+    public void shouldNotThrowWithMultipleFiles(){
+        GoldenMaster.verify("Works the first time", "first");
+        GoldenMaster.verify("Second time should also work fine", "second");
+    }
 }
