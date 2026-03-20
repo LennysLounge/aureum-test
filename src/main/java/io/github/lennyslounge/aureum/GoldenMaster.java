@@ -2,7 +2,15 @@ package io.github.lennyslounge.aureum;
 
 public class GoldenMaster {
 
-    private static final GoldenMasterVerifier DEFAULT_VERIFIER = new GoldenMasterVerifier();
+    private static final GoldenMasterVerifier DEFAULT_VERIFIER = new GoldenMasterVerifier()
+             .withFileNamingStrategy(new FileNamePattern()
+                      .fixed("src/test/java/")
+                      .packageAsPath()
+                      .className()
+                      .methodNameWithPrefix(".")
+                      .verificationNameWithPrefixIfPresent(".")
+                      .roleWithPrefix(".")
+                      .fileExtension("txt"));
 
     public static GoldenMasterVerifier defaultVerifier() {
         return DEFAULT_VERIFIER;

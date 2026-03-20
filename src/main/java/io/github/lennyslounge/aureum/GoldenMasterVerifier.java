@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 
 public class GoldenMasterVerifier {
 
-    /*
+        /*
     0) Configuration is immutable and threadsafe
         a) Config is just an immutable threadsafe object that is used to run validations
         b) Different environments (ci / local) can configure the config
@@ -79,6 +79,20 @@ public class GoldenMasterVerifier {
             * multiple or none of these
      */
 
+    private final FileNamingStrategy namingStrategy;
+
+    public GoldenMasterVerifier() {
+        this(ctx -> Paths.get(""));
+    }
+
+    public GoldenMasterVerifier(FileNamingStrategy namingStrategy) {
+        this.namingStrategy = namingStrategy;
+    }
+
+    public GoldenMasterVerifier withFileNamingStrategy(FileNamingStrategy strategy) {
+        return new GoldenMasterVerifier(strategy);
+    }
+
     public void verify(String actual) {
         verify(actual, null);
     }
@@ -87,13 +101,13 @@ public class GoldenMasterVerifier {
         Method currentTestMethod = TestMethodUtil.findCurrentTestMethod();
 
         Path basePath = Paths.get(".")
-                .resolve(System.getProperty("aureum.basePath", "."))
-                .normalize();
+                 .resolve(System.getProperty("aureum.basePath", "."))
+                 .normalize();
 
-        Path masterPath = basePath.resolve("golden-master.txt");
+        Path masterPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod, name, FileNamingStrategy.Role.APPROVED)));
 
         try (Stream<String> masterLines = Files.lines(masterPath);
-             BufferedReader reader = new BufferedReader(new StringReader(actual))) {
+                 BufferedReader reader = new BufferedReader(new StringReader(actual))) {
             Stream<String> actualLines = reader.lines();
 
             Iterator<String> masterLinesIter = masterLines.iterator();
@@ -113,9 +127,9 @@ public class GoldenMasterVerifier {
             }
 
             if (!isEqual) {
-                Path receivedPath = basePath.resolve(
-                        "received-" + currentTestMethod.getName() + ".txt"
-                );
+                Path receivedPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod,
+                         name,
+                         FileNamingStrategy.Role.RECEIVED)));
                 Files.write(receivedPath, actual.getBytes());
                 throw new AssertionFailedError("Master does not match received");
             }

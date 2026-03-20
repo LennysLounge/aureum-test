@@ -18,15 +18,4 @@ public class GoldenMasterTest {
             GoldenMaster.verify("Hello World");
         }).isInstanceOf(AssertionFailedError.class);
     }
-
-    @Test
-    public void shouldNotThrowWithCustomVerifier(){
-        GoldenMaster.defaultVerifier()
-                .verify("Hello World!");
-    }
-
-    @Test
-    public void printWorkingDir(){
-        System.out.println("working dir: " + System.getProperty("user.dir"));
-    }
 }

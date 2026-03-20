@@ -6,12 +6,33 @@ import java.nio.file.Path;
 @FunctionalInterface
 public interface FileNamingStrategy {
 
-    /**
-     * Resolves the path of the approved file relative to the base path.
-     *
-     * @param testMethod the currently executing test method
-     * @param name       an optional name for the verification, or {@code null} if not provided
-     * @return path relative to the base path
-     */
-    Path resolve(Method testMethod, String name);
+    Path resolve(Context context);
+
+    enum Role {
+        APPROVED, RECEIVED
+    }
+
+    class Context {
+        private final Method testMethod;
+        private final String name;
+        private final Role role;
+
+        public Context(Method testMethod, String name, Role role) {
+            this.testMethod = testMethod;
+            this.name = name;
+            this.role = role;
+        }
+
+        public Method getTestMethod() {
+            return testMethod;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Role getRole() {
+            return role;
+        }
+    }
 }
