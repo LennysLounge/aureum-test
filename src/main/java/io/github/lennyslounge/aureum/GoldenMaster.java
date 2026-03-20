@@ -1,4 +1,4 @@
-package io.github.lennyslounge;
+package io.github.lennyslounge.aureum;
 
 public class GoldenMaster {
 
@@ -11,5 +11,8 @@ public class GoldenMaster {
     public static void verify(String actual) {
         DEFAULT_VERIFIER.verify(actual);
     }
+
+    public static void verify(String actual, String name) {
+        DEFAULT_VERIFIER.verify(actual, name);
+    }
 }
- 

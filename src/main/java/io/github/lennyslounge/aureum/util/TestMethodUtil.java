@@ -1,4 +1,4 @@
-package io.github.lennyslounge.util;
+package io.github.lennyslounge.aureum.util;
 
 import java.lang.reflect.Method;
 import java.util.*;

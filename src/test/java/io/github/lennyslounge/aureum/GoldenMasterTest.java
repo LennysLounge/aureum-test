@@ -1,4 +1,4 @@
-package io.github.lennyslounge;
+package io.github.lennyslounge.aureum;
 
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
@@ -23,5 +23,10 @@ public class GoldenMasterTest {
     public void shouldNotThrowWithCustomVerifier(){
         GoldenMaster.defaultVerifier()
                 .verify("Hello World!");
+    }
+
+    @Test
+    public void printWorkingDir(){
+        System.out.println("working dir: " + System.getProperty("user.dir"));
     }
 }

@@ -1,4 +1,4 @@
-package io.github.lennyslounge.util;
+package io.github.lennyslounge.aureum.util;
 
 import org.junit.Rule;
 import org.junit.Test;

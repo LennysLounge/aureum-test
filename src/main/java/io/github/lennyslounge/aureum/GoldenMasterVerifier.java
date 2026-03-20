@@ -1,10 +1,9 @@
-package io.github.lennyslounge;
+package io.github.lennyslounge.aureum;
 
-import io.github.lennyslounge.util.TestMethodUtil;
+import io.github.lennyslounge.aureum.util.TestMethodUtil;
 import org.opentest4j.AssertionFailedError;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.lang.reflect.Method;
@@ -24,15 +23,13 @@ public class GoldenMasterVerifier {
             public static final variable
     1) Where is the golden master file and what is it called
         a) Base search path:
-            * by default the working directory is assumed to be the project root (where the pom lives)
-            * the base path must be configurable from outside the JVM to allow for different environments
+            * base path = working directory + system property "aureum.basePath" (relative, defaults to ".")
         b) File name pattern
-            * custom interface implementation
-            * builder
+            * custom interface implementation (FileNamingStrategy)
+            * builder (StandardFileNamingStrategy.builder())
         c) File extension
             * fixed
-            * auto (serializer decides
-        d) Counter for multiple validations per test
+            * auto (serializer decides)
     2) How is the candidate serialized
         a) Object::toString()
         b) Structural serializers
@@ -83,17 +80,21 @@ public class GoldenMasterVerifier {
      */
 
     public void verify(String actual) {
-        Method currentTestMethod = TestMethodUtil.findCurrentTestMethod();
-        Class<?> currentTestClass = currentTestMethod.getDeclaringClass();
-        Path basePath = Paths.get("src", "test", "java")
-                .resolve(Paths.get(currentTestClass.getPackage().getName().replace(".", File.separator)));
+        verify(actual, null);
+    }
 
-        Path masterPath = basePath
-                .resolve(currentTestClass.getSimpleName() + "." + currentTestMethod.getName() + ".approved.txt");
+    public void verify(String actual, String name) {
+        Method currentTestMethod = TestMethodUtil.findCurrentTestMethod();
+
+        Path basePath = Paths.get(".")
+                .resolve(System.getProperty("aureum.basePath", "."))
+                .normalize();
+
+        Path masterPath = basePath.resolve("golden-master.txt");
+
         try (Stream<String> masterLines = Files.lines(masterPath);
              BufferedReader reader = new BufferedReader(new StringReader(actual))) {
             Stream<String> actualLines = reader.lines();
-
 
             Iterator<String> masterLinesIter = masterLines.iterator();
             Iterator<String> actualLinesIter = actualLines.iterator();
@@ -112,8 +113,9 @@ public class GoldenMasterVerifier {
             }
 
             if (!isEqual) {
-                Path receivedPath = basePath
-                        .resolve(currentTestClass.getSimpleName() + "." + currentTestMethod.getName() + ".received.txt");
+                Path receivedPath = basePath.resolve(
+                        "received-" + currentTestMethod.getName() + ".txt"
+                );
                 Files.write(receivedPath, actual.getBytes());
                 throw new AssertionFailedError("Master does not match received");
             }
