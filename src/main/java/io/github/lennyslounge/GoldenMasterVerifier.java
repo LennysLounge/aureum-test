@@ -24,8 +24,8 @@ public class GoldenMasterVerifier {
             public static final variable
     1) Where is the golden master file and what is it called
         a) Base search path:
-            * src/test/java
-            * resources
+            * by default the working directory is assumed to be the project root (where the pom lives)
+            * the base path must be configurable from outside the JVM to allow for different environments
         b) File name pattern
             * custom interface implementation
             * builder
