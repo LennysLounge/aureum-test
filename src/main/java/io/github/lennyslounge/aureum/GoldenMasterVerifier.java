@@ -10,7 +10,10 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public class GoldenMasterVerifier {
@@ -80,17 +83,39 @@ public class GoldenMasterVerifier {
      */
 
     private final FileNamingStrategy namingStrategy;
+    private final Serializer defaultSerializer;
+    private final Map<Class<?>, Serializer> serializers;
 
     public GoldenMasterVerifier() {
-        this(ctx -> Paths.get(""));
+        this(ctx -> Paths.get(""), Object::toString, Collections.<Class<?>, Serializer>emptyMap());
     }
 
-    public GoldenMasterVerifier(FileNamingStrategy namingStrategy) {
+    private GoldenMasterVerifier(FileNamingStrategy namingStrategy, Serializer defaultSerializer, Map<Class<?>, Serializer> serializers) {
         this.namingStrategy = namingStrategy;
+        this.defaultSerializer = defaultSerializer;
+        this.serializers = serializers;
     }
 
     public GoldenMasterVerifier withFileNamingStrategy(FileNamingStrategy strategy) {
-        return new GoldenMasterVerifier(strategy);
+        return new GoldenMasterVerifier(strategy, defaultSerializer, serializers);
+    }
+
+    public GoldenMasterVerifier withDefaultSerializer(Serializer serializer) {
+        return new GoldenMasterVerifier(namingStrategy, serializer, serializers);
+    }
+
+    public <T> GoldenMasterVerifier withSerializer(Class<T> type, Serializer serializer) {
+        Map<Class<?>, Serializer> newSerializers = new HashMap<Class<?>, Serializer>(serializers);
+        newSerializers.put(type, serializer);
+        return new GoldenMasterVerifier(namingStrategy, defaultSerializer, Collections.unmodifiableMap(newSerializers));
+    }
+
+    public void verify(Object actual) {
+        verify(serializers.getOrDefault(actual.getClass(), defaultSerializer).serialize(actual), null);
+    }
+
+    public void verify(Object actual, String name) {
+        verify(serializers.getOrDefault(actual.getClass(), defaultSerializer).serialize(actual), name);
     }
 
     public void verify(String actual) {

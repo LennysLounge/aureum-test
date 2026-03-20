@@ -10,7 +10,8 @@ public class GoldenMaster {
                       .methodNameWithPrefix(".")
                       .verificationNameWithPrefixIfPresent(".")
                       .roleWithPrefix(".")
-                      .fileExtension("txt"));
+                      .fileExtension("txt"))
+             .withDefaultSerializer(Object::toString);
 
     public static GoldenMasterVerifier defaultVerifier() {
         return DEFAULT_VERIFIER;
@@ -21,6 +22,14 @@ public class GoldenMaster {
     }
 
     public static void verify(String actual, String name) {
+        DEFAULT_VERIFIER.verify(actual, name);
+    }
+
+    public static void verify(Object actual) {
+        DEFAULT_VERIFIER.verify(actual);
+    }
+
+    public static void verify(Object actual, String name) {
         DEFAULT_VERIFIER.verify(actual, name);
     }
 }
