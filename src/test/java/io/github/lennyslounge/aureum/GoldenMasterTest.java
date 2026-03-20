@@ -26,4 +26,18 @@ public class GoldenMasterTest {
 
         receivedFile.toFile().delete();
     }
+
+    @Test
+    public void shouldCreateApprovedAndReceivedFilesAndThrow(){
+        assertThatThrownBy(() -> GoldenMaster.verify("Hello World"))
+                 .isInstanceOf(AssertionFailedError.class);
+
+        Path approvedFile = Paths.get("src/test/java/io/github/lennyslounge/aureum/GoldenMasterTest.shouldCreateApprovedAndReceivedFilesAndThrow.approved.txt");
+        assertThat(approvedFile).exists();
+        approvedFile.toFile().delete();
+
+        Path receivedFile = Paths.get("src/test/java/io/github/lennyslounge/aureum/GoldenMasterTest.shouldCreateApprovedAndReceivedFilesAndThrow.received.txt");
+        assertThat(receivedFile).exists();
+        receivedFile.toFile().delete();
+    }
 }

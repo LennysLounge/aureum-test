@@ -105,6 +105,13 @@ public class GoldenMasterVerifier {
                  .normalize();
 
         Path masterPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod, name, FileNamingStrategy.Role.APPROVED)));
+        try {
+            if (!Files.exists(masterPath)) {
+                Files.createFile(masterPath);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         try (Stream<String> masterLines = Files.lines(masterPath);
                  BufferedReader reader = new BufferedReader(new StringReader(actual))) {
