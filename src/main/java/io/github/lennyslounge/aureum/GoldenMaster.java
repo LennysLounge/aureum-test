@@ -11,7 +11,9 @@ public class GoldenMaster {
                       .verificationNameWithPrefixIfPresent(".")
                       .roleWithPrefix(".")
                       .fileExtension("txt"))
-            .withDefaultWriter(new Serializer.ToStringWriter());
+            .withFallbackWriter(new Serializer.ToStringWriter())
+            .withCommonWriters()
+            ;
 
     public static GoldenMasterVerifier defaultVerifier() {
         return DEFAULT_VERIFIER;

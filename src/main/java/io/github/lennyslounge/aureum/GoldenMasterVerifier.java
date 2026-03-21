@@ -100,14 +100,14 @@ public class GoldenMasterVerifier {
         return new GoldenMasterVerifier(strategy, serializer);
     }
 
-    public GoldenMasterVerifier withDefaultWriter(Writer<Object> writer) {
+    public GoldenMasterVerifier withFallbackWriter(Writer<Object> writer) {
         return new GoldenMasterVerifier(namingStrategy,
                 new Serializer(writer, new HashMap<>(serializer.classWriters))
         );
     }
 
-    public GoldenMasterVerifier withDefaultWriter(BiFunction<Serializer, Object, String> writer) {
-        return withDefaultWriter(writer::apply);
+    public GoldenMasterVerifier withFallbackWriter(BiFunction<Serializer, Object, String> writer) {
+        return withFallbackWriter(writer::apply);
     }
 
     public <T> GoldenMasterVerifier withWriterForClass(Class<T> type, Writer<T> writer) {
@@ -118,6 +118,14 @@ public class GoldenMasterVerifier {
         return new GoldenMasterVerifier(namingStrategy,
                 new Serializer(serializer.defaultWriter, classWriters)
         );
+    }
+
+    public GoldenMasterVerifier withCommonWriters() {
+        return this
+                .withWriterForClass(String.class, (serializer, str) -> "\"" + str + "\"")
+                .withWriterForClass(Integer.class, (serializer, i) -> String.valueOf(i))
+                .withWriterForClass(Boolean.class, (serializer, bool) -> String.valueOf(bool))
+                ;
     }
 
     public void verify(Object actual) {

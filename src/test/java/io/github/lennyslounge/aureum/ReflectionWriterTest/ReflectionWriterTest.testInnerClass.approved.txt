@@ -1,0 +1,4 @@
+ReflectionWriterTest.InnerClass[
+    publicField: 12,
+    privateString: "ok",
+]

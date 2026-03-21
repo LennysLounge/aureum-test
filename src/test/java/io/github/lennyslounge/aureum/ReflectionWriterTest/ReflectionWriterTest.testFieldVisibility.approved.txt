@@ -1,0 +1,14 @@
+ClassWithDifferentFeatures[
+    publicField: "ok",
+    privateFieldWithGetter: "ok",
+    protectedFieldWithGetter: "ok",
+    recordFieldGetter: "ok",
+    booleanWithGetter: true,
+    booleanWithRecordGetter: true,
+    booleanWithIsGetter: true,
+    boxedBooleanWithGetter: true,
+    boxedBooleanWithRecordGetter: true,
+    boxedBooleanWithIsGetter: true,
+    isBooleanWithIsPrefix: true,
+    isBooleanWithIsPrefixButMethodHasDoublePrefix: true,
+]
