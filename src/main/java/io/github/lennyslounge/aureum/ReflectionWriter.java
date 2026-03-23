@@ -13,6 +13,23 @@ public class ReflectionWriter implements Writer<Object> {
 
     private final boolean usePrettyPrinting;
 
+    /*
+    - ignore field
+    - ignore fields of type
+    - replace with placeholder
+        > static placeholder e.g. <UUID>
+        > counting occurrences e.g.
+            every occurrence of 'a' is replaced with <UUID_1>,
+            every occurrence of 'b' is replaced with <UUID_2>,
+            etc.
+        > relative to first occurrence e.g.
+            first occurrence is replaced with <TIMESTAMP_A>
+            every other occurrence is replace with its value relative to the first occurrence
+                <TIMESTAMP_A+12s>
+                <COUNT_A+1>, <COUNT_A+2>
+                etc
+     */
+
     public ReflectionWriter() {
         this(false);
     }
