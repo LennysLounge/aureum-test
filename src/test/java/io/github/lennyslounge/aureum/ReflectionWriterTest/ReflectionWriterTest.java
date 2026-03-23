@@ -1,13 +1,13 @@
 package io.github.lennyslounge.aureum.ReflectionWriterTest;
 
+import io.github.lennyslounge.aureum.GoldenMasters;
 import io.github.lennyslounge.aureum.GoldenMaster;
-import io.github.lennyslounge.aureum.GoldenMasterVerifier;
 import io.github.lennyslounge.aureum.ReflectionWriter;
 import org.junit.jupiter.api.Test;
 
 public class ReflectionWriterTest {
 
-    GoldenMasterVerifier master = GoldenMaster.defaultVerifier()
+    GoldenMaster master = GoldenMaster.defaultConfig()
             .withFallbackWriter(new ReflectionWriter().withPrettyPrinting());
 
     @Test

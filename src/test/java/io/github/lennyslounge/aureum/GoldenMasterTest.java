@@ -13,12 +13,12 @@ public class GoldenMasterTest {
 
     @Test
     public void shouldNotThrow(){
-        GoldenMaster.verify("Hello World!");
+        GoldenMasters.verify("Hello World!");
     }
 
     @Test
     public void shouldThrow(){
-        assertThatThrownBy(() -> GoldenMaster.verify("Hello World"))
+        assertThatThrownBy(() -> GoldenMasters.verify("Hello World"))
                 .isInstanceOf(AssertionFailedError.class);
 
         Path receivedFile = Paths.get("src/test/java/io/github/lennyslounge/aureum/GoldenMasterTest.shouldThrow.received.txt");
@@ -29,7 +29,7 @@ public class GoldenMasterTest {
 
     @Test
     public void shouldCreateApprovedAndReceivedFilesAndThrow(){
-        assertThatThrownBy(() -> GoldenMaster.verify("Hello World"))
+        assertThatThrownBy(() -> GoldenMasters.verify("Hello World"))
                  .isInstanceOf(AssertionFailedError.class);
 
         Path approvedFile = Paths.get("src/test/java/io/github/lennyslounge/aureum/GoldenMasterTest.shouldCreateApprovedAndReceivedFilesAndThrow.approved.txt");
@@ -43,7 +43,7 @@ public class GoldenMasterTest {
 
     @Test
     public void shouldNotThrowWithMultipleFiles(){
-        GoldenMaster.verify("Works the first time", "first");
-        GoldenMaster.verify("Second time should also work fine", "second");
+        GoldenMasters.verify("Works the first time", "first");
+        GoldenMasters.verify("Second time should also work fine", "second");
     }
 }

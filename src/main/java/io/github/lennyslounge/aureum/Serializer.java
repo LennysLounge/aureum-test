@@ -7,22 +7,30 @@ import java.util.function.BiFunction;
 
 public class Serializer {
 
-    public Writer<Object> defaultWriter = new ToStringWriter();
-    public Map<Class<?>, Writer<Object>> classWriters = new HashMap<>();
+    Writer<Object> defaultWriter = null;
+    Map<Class<?>, Writer<Object>> classWriters = new HashMap<>();
     private int indentLevel = 0;
     private String indent = "";
 
-    public Serializer(Writer<Object> defaultWriter, Map<Class<?>, Writer<Object>> classWriters) {
+    Serializer() {
+
+    }
+
+    Serializer(Writer<Object> defaultWriter, Map<Class<?>, Writer<Object>> classWriters) {
         this.classWriters = classWriters;
         this.defaultWriter = defaultWriter;
     }
 
-    public String toString(Object o) {
-        Writer<Object> classWriter = classWriters.get(o.getClass());
+    Writer<Object> getWriter(Class<?> clazz) {
+        Writer<Object> classWriter = classWriters.get(clazz);
         if (classWriter != null) {
-            return classWriter.apply(this, o);
+            return classWriter;
         }
-        return defaultWriter.apply(this, o);
+        return defaultWriter;
+    }
+
+    public String toString(Object o) {
+        return getWriter(o.getClass()).apply(this, o);
     }
 
     public void increaseIndent() {

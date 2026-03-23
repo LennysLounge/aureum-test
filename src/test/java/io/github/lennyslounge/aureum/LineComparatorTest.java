@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class LineComparatorTest {
 
-    private static GoldenMasterVerifier master = GoldenMaster.defaultVerifier().withComparator(new LineComparator());
+    private static final GoldenMaster master = GoldenMaster.defaultConfig().withComparator(new LineComparator());
 
     @Test
     public void shouldMatchWithDifferentLineEndings() throws IOException {
@@ -42,7 +42,7 @@ public class LineComparatorTest {
         String receivedText = "This line has trailing whitespace in the master but not in the received file\n"
                 + "This line has trailing whitespace in the received file but not in the master    ";
 
-        assertThatThrownBy(() -> GoldenMaster.verify(receivedText))
+        assertThatThrownBy(() -> GoldenMasters.verify(receivedText))
                  .isInstanceOf(AssertionFailedError.class);
 
         Files.delete(receivedFile);
