@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -30,16 +31,26 @@ public class LineComparatorTest {
 
     @Test
     public void shouldMatchIgnoringTrailingWhitespace() throws IOException {
-        String text = "This line has trailing whitespace in the master but not in the received file\n"
-                 + "This line has trailing whitespace in the received file but not in the master    ";
+        Path approvedFile = master.resolveFileName(FileNamingStrategy.Role.APPROVED);
+        Path receivedFile = master.resolveFileName(FileNamingStrategy.Role.RECEIVED);
 
-        assertThatThrownBy(() -> GoldenMaster.verify(text))
+        Files.createFile(approvedFile);
+        Files.write(approvedFile, ("This line has trailing whitespace in the master but not in the received file    \n"
+                + "This line has trailing whitespace in the received file but not in the master")
+                .getBytes(StandardCharsets.UTF_8));
+
+        String receivedText = "This line has trailing whitespace in the master but not in the received file\n"
+                + "This line has trailing whitespace in the received file but not in the master    ";
+
+        assertThatThrownBy(() -> GoldenMaster.verify(receivedText))
                  .isInstanceOf(AssertionFailedError.class);
 
-        Files.delete(GoldenMaster.defaultVerifier().resolveFileName(FileNamingStrategy.Role.RECEIVED));
+        Files.delete(receivedFile);
 
         master.withComparator(new LineComparator().ignoreTrailingWhitespace())
-                 .verify(text);
+                 .verify(receivedText);
+
+        Files.delete(approvedFile);
     }
 
 }
