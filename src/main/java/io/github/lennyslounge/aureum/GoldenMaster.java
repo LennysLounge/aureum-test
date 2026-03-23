@@ -13,6 +13,7 @@ public class GoldenMaster {
                       .fileExtension("txt"))
             .withFallbackWriter(new Serializer.ToStringWriter())
             .withCommonWriters()
+            .withComparator(new LineComparator());
             ;
 
     public static GoldenMasterVerifier defaultVerifier() {

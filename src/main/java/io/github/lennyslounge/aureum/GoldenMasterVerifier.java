@@ -3,9 +3,7 @@ package io.github.lennyslounge.aureum;
 import io.github.lennyslounge.aureum.util.TestMethodUtil;
 import org.opentest4j.AssertionFailedError;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.StringReader;
+import java.io.*;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -84,25 +82,29 @@ public class GoldenMasterVerifier {
 
     private final FileNamingStrategy namingStrategy;
     private final Serializer serializer;
+    private final Comparator comparator;
 
     public GoldenMasterVerifier() {
         this(ctx -> Paths.get(""),
-                new Serializer(new Serializer.ToStringWriter(), new HashMap<>())
+                new Serializer(new Serializer.ToStringWriter(), new HashMap<>()),
+                new LineComparator()
         );
     }
 
-    private GoldenMasterVerifier(FileNamingStrategy namingStrategy, Serializer serializer) {
+    private GoldenMasterVerifier(FileNamingStrategy namingStrategy, Serializer serializer, Comparator comparator) {
         this.namingStrategy = namingStrategy;
         this.serializer = serializer;
+        this.comparator = comparator;
     }
 
     public GoldenMasterVerifier withFileNamingStrategy(FileNamingStrategy strategy) {
-        return new GoldenMasterVerifier(strategy, serializer);
+        return new GoldenMasterVerifier(strategy, serializer, comparator);
     }
 
     public GoldenMasterVerifier withFallbackWriter(Writer<Object> writer) {
         return new GoldenMasterVerifier(namingStrategy,
-                new Serializer(writer, new HashMap<>(serializer.classWriters))
+                new Serializer(writer, new HashMap<>(serializer.classWriters)),
+                comparator
         );
     }
 
@@ -116,7 +118,8 @@ public class GoldenMasterVerifier {
         Writer<Object> objectWriter = (Writer<Object>) writer;
         classWriters.put(type, objectWriter);
         return new GoldenMasterVerifier(namingStrategy,
-                new Serializer(serializer.defaultWriter, classWriters)
+                new Serializer(serializer.defaultWriter, classWriters),
+                comparator
         );
     }
 
@@ -126,6 +129,11 @@ public class GoldenMasterVerifier {
                 .withWriterForClass(Integer.class, (serializer, i) -> String.valueOf(i))
                 .withWriterForClass(Boolean.class, (serializer, bool) -> String.valueOf(bool))
                 ;
+    }
+
+    
+    public GoldenMasterVerifier withComparator(Comparator comparator) {
+        return new GoldenMasterVerifier(namingStrategy, serializer, comparator);
     }
 
     public void verify(Object actual) {
@@ -156,26 +164,10 @@ public class GoldenMasterVerifier {
             throw new RuntimeException(e);
         }
 
-        try (Stream<String> masterLines = Files.lines(masterPath);
-             BufferedReader reader = new BufferedReader(new StringReader(actual))) {
-            Stream<String> actualLines = reader.lines();
-
-            Iterator<String> masterLinesIter = masterLines.iterator();
-            Iterator<String> actualLinesIter = actualLines.iterator();
-
-            boolean isEqual = true;
-            while (masterLinesIter.hasNext() && actualLinesIter.hasNext()) {
-                if (!masterLinesIter.next().equals(actualLinesIter.next())) {
-                    isEqual = false;
-                    break;
-                }
-            }
-            if (isEqual) {
-                if (masterLinesIter.hasNext() != actualLinesIter.hasNext()) {
-                    isEqual = false;
-                }
-            }
-
+        try (InputStream approvedIS = Files.newInputStream(masterPath);
+                 InputStream receivedIS = new ByteArrayInputStream(actual.getBytes());
+        ) {
+            boolean isEqual = comparator.isEqual(approvedIS, receivedIS);
             if (!isEqual) {
                 Path receivedPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod,
                         name,
@@ -183,9 +175,17 @@ public class GoldenMasterVerifier {
                 Files.write(receivedPath, actual.getBytes());
                 throw new AssertionFailedError("Master does not match received");
             }
-
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+
+    public Path resolveFileName(FileNamingStrategy.Role role){
+        return resolveFileName(role, null);
+    }
+
+    public Path resolveFileName(FileNamingStrategy.Role role, String name) {
+        return namingStrategy.resolve(new FileNamingStrategy.Context(TestMethodUtil.findCurrentTestMethod(), name, role));
     }
 }

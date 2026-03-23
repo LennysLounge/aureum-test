@@ -1,0 +1,2 @@
+This line has trailing whitespace in the master but not in the received file
+This line has trailing whitespace in the received file but not in the master
