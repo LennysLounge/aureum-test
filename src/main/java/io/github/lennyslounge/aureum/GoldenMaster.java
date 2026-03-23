@@ -20,14 +20,6 @@ public class GoldenMaster {
         return DEFAULT_VERIFIER;
     }
 
-    public static void verify(String actual) {
-        DEFAULT_VERIFIER.verify(actual);
-    }
-
-    public static void verify(String actual, String name) {
-        DEFAULT_VERIFIER.verify(actual, name);
-    }
-
     public static void verify(Object actual) {
         DEFAULT_VERIFIER.verify(actual);
     }

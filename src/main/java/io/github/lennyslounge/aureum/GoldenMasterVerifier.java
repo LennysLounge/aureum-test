@@ -136,19 +136,11 @@ public class GoldenMasterVerifier {
         return new GoldenMasterVerifier(namingStrategy, serializer, comparator);
     }
 
-    public void verify(Object actual) {
-        verify(serializer.toString(actual), null);
+    public void verify(Object candidate) {
+        verify(candidate, null);
     }
 
-    public void verify(Object actual, String name) {
-        verify(serializer.toString(actual), name);
-    }
-
-    public void verify(String actual) {
-        verify(actual, null);
-    }
-
-    public void verify(String actual, String name) {
+    public void verify(Object candidate, String name) {
         Method currentTestMethod = TestMethodUtil.findCurrentTestMethod();
 
         Path basePath = Paths.get(".")
@@ -164,15 +156,17 @@ public class GoldenMasterVerifier {
             throw new RuntimeException(e);
         }
 
+        String received = serializer.toString(candidate);
+
         try (InputStream approvedIS = Files.newInputStream(masterPath);
-                 InputStream receivedIS = new ByteArrayInputStream(actual.getBytes());
+                 InputStream receivedIS = new ByteArrayInputStream(received.getBytes());
         ) {
             boolean isEqual = comparator.isEqual(approvedIS, receivedIS);
             if (!isEqual) {
                 Path receivedPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod,
                         name,
                         FileNamingStrategy.Role.RECEIVED)));
-                Files.write(receivedPath, actual.getBytes());
+                Files.write(receivedPath, received.getBytes());
                 throw new AssertionFailedError("Master does not match received");
             }
         } catch (IOException e) {
