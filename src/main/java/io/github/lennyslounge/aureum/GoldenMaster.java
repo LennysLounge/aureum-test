@@ -5,6 +5,7 @@ import org.opentest4j.AssertionFailedError;
 
 import java.io.*;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -88,29 +89,28 @@ public class GoldenMaster {
                       .roleWithPrefix(".")
                       .fileExtension("txt"))
              .withFallbackWriter(new ToStringWriter())
-             .withCommonWriters()
-             .withComparator(new LineComparator());
+             .withCommonWriters();
 
     private final FileNamingStrategy namingStrategy;
     private final Writer<Object> fallbackWriter;
     private final Map<Class<?>, Writer<Object>> classWriters;
-    private final Comparator comparator;
+    private final boolean ignoreTrailingWhitespace;
 
     public GoldenMaster() {
         this.namingStrategy = new FileNamePattern().fixed("master");
         this.fallbackWriter = new ToStringWriter();
         this.classWriters = new HashMap<>();
-        this.comparator = new LineComparator();
+        ignoreTrailingWhitespace = false;
     }
 
     private GoldenMaster(FileNamingStrategy namingStrategy,
              Writer<Object> fallbackWriter,
              Map<Class<?>, Writer<Object>> classWriters,
-             Comparator comparator) {
+             boolean ignoreTrailingWhitespace) {
         this.namingStrategy = namingStrategy;
         this.fallbackWriter = fallbackWriter;
         this.classWriters = classWriters;
-        this.comparator = comparator;
+        this.ignoreTrailingWhitespace = ignoreTrailingWhitespace;
     }
 
     public static GoldenMaster defaultConfig() {
@@ -122,7 +122,7 @@ public class GoldenMaster {
                  strategy,
                  fallbackWriter,
                  classWriters,
-                 comparator
+                 ignoreTrailingWhitespace
         );
     }
 
@@ -131,7 +131,7 @@ public class GoldenMaster {
                  namingStrategy,
                  writer,
                  classWriters,
-                 comparator
+                 ignoreTrailingWhitespace
         );
     }
 
@@ -143,7 +143,7 @@ public class GoldenMaster {
         return new GoldenMaster(namingStrategy,
                  fallbackWriter,
                  classWriters,
-                 comparator
+                 ignoreTrailingWhitespace
         );
     }
 
@@ -155,12 +155,11 @@ public class GoldenMaster {
                  ;
     }
 
-    public GoldenMaster withComparator(Comparator comparator) {
-        return new GoldenMaster(
-                 namingStrategy,
+    public GoldenMaster withIgnoreTrailingWhitespace() {
+        return new GoldenMaster(namingStrategy,
                  fallbackWriter,
                  classWriters,
-                 comparator
+                 true
         );
     }
 
@@ -169,6 +168,15 @@ public class GoldenMaster {
     }
 
     public void verify(Object candidate, String name) {
+        Serializer serializer = new Serializer(fallbackWriter, classWriters);
+        verify(serializer.toString(candidate), name);
+    }
+
+    public void verify(String received) {
+        verify(received, null);
+    }
+
+    public void verify(String received, String name) {
         Method currentTestMethod = TestMethodUtil.findCurrentTestMethod();
 
         Path basePath = Paths.get(".")
@@ -184,20 +192,50 @@ public class GoldenMaster {
             throw new RuntimeException(e);
         }
 
-        Serializer serializer = new Serializer(fallbackWriter, classWriters);
-        String received = serializer.toString(candidate);
-
-        try (InputStream approvedIS = Files.newInputStream(masterPath);
-                 InputStream receivedIS = new ByteArrayInputStream(received.getBytes());
-        ) {
-
-            boolean isEqual = comparator.isEqual(approvedIS, receivedIS);
-            if (!isEqual) {
-                Path receivedPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod,
-                         name,
-                         FileNamingStrategy.Role.RECEIVED)));
+        if (!isEqual(masterPath, received)) {
+            Path receivedPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod,
+                     name,
+                     FileNamingStrategy.Role.RECEIVED)));
+            try {
                 Files.write(receivedPath, received.getBytes());
-                throw new AssertionFailedError("Master does not match received");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            throw new AssertionFailedError("Master does not match received");
+        }
+    }
+
+    public boolean isEqual(Path approvedFile, String received) {
+        // Wrap streams in Readers to handle UTF-8 decoding and line breaking safely
+        try (BufferedReader approvedReader = Files.newBufferedReader(approvedFile, StandardCharsets.UTF_8);
+                 BufferedReader receivedReader = new BufferedReader(new StringReader(received))) {
+
+            String approvedLine;
+            String receivedLine;
+
+            while (true) {
+                approvedLine = approvedReader.readLine();
+                receivedLine = receivedReader.readLine();
+
+                // If both reached the end of the file simultaneously, it's a match
+                if (approvedLine == null && receivedLine == null) {
+                    return true;
+                }
+
+                // If one file is longer than the other, it's a mismatch
+                if (approvedLine == null || receivedLine == null) {
+                    return false;
+                }
+
+                if (ignoreTrailingWhitespace) {
+                    approvedLine = approvedLine.trim();
+                    receivedLine = receivedLine.trim();
+                }
+
+                // Compare the normalized lines
+                if (!approvedLine.equals(receivedLine)) {
+                    return false;
+                }
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

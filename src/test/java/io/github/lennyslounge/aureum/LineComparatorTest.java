@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class LineComparatorTest {
 
-    private static final GoldenMaster master = GoldenMaster.defaultConfig().withComparator(new LineComparator());
+    private static final GoldenMaster master = GoldenMaster.defaultConfig();
 
     @Test
     public void shouldMatchWithDifferentLineEndings() throws IOException {
@@ -47,7 +47,7 @@ public class LineComparatorTest {
 
         Files.delete(receivedFile);
 
-        master.withComparator(new LineComparator().ignoreTrailingWhitespace())
+        master.withIgnoreTrailingWhitespace()
                  .verify(receivedText);
 
         Files.delete(approvedFile);
