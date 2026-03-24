@@ -46,4 +46,9 @@ public class GoldenMasterTest {
         GoldenMasters.verify("Works the first time", "first");
         GoldenMasters.verify("Second time should also work fine", "second");
     }
+
+    @Test
+    public void test(){
+        GoldenMasters.verify("Should open reporter how does this look?");
+    }
 }

@@ -89,28 +89,34 @@ public class GoldenMaster {
                       .roleWithPrefix(".")
                       .fileExtension("txt"))
              .withFallbackWriter(new ToStringWriter())
-             .withCommonWriters();
+             .withCommonWriters()
+             .withReporter(new IntelliJDiffReporter());
+             //.withReporter(new SimpleDiffReporter());
 
     private final FileNamingStrategy namingStrategy;
     private final Writer<Object> fallbackWriter;
     private final Map<Class<?>, Writer<Object>> classWriters;
     private final boolean ignoreTrailingWhitespace;
+    private final Reporter reporter;
 
     public GoldenMaster() {
         this.namingStrategy = new FileNamePattern().fixed("master");
         this.fallbackWriter = new ToStringWriter();
         this.classWriters = new HashMap<>();
-        ignoreTrailingWhitespace = false;
+        this.ignoreTrailingWhitespace = false;
+        this.reporter = null;
     }
 
     private GoldenMaster(FileNamingStrategy namingStrategy,
              Writer<Object> fallbackWriter,
              Map<Class<?>, Writer<Object>> classWriters,
-             boolean ignoreTrailingWhitespace) {
+             boolean ignoreTrailingWhitespace,
+             Reporter reporter) {
         this.namingStrategy = namingStrategy;
         this.fallbackWriter = fallbackWriter;
         this.classWriters = classWriters;
         this.ignoreTrailingWhitespace = ignoreTrailingWhitespace;
+        this.reporter = reporter;
     }
 
     public static GoldenMaster defaultConfig() {
@@ -118,21 +124,11 @@ public class GoldenMaster {
     }
 
     public GoldenMaster withFileNamingStrategy(FileNamingStrategy strategy) {
-        return new GoldenMaster(
-                 strategy,
-                 fallbackWriter,
-                 classWriters,
-                 ignoreTrailingWhitespace
-        );
+        return new GoldenMaster(strategy, fallbackWriter, classWriters, ignoreTrailingWhitespace, reporter);
     }
 
     public GoldenMaster withFallbackWriter(Writer<Object> writer) {
-        return new GoldenMaster(
-                 namingStrategy,
-                 writer,
-                 classWriters,
-                 ignoreTrailingWhitespace
-        );
+        return new GoldenMaster(namingStrategy, writer, classWriters, ignoreTrailingWhitespace, reporter);
     }
 
     public <T> GoldenMaster withWriterForClass(Class<T> type, Writer<T> writer) {
@@ -140,27 +136,22 @@ public class GoldenMaster {
         @SuppressWarnings("unchecked")
         Writer<Object> objectWriter = (Writer<Object>) writer;
         classWriters.put(type, objectWriter);
-        return new GoldenMaster(namingStrategy,
-                 fallbackWriter,
-                 classWriters,
-                 ignoreTrailingWhitespace
-        );
+        return new GoldenMaster(namingStrategy, fallbackWriter, classWriters, ignoreTrailingWhitespace, reporter);
     }
 
     public GoldenMaster withCommonWriters() {
         return this
                  .withWriterForClass(String.class, (serializer, str) -> "\"" + str + "\"")
                  .withWriterForClass(Integer.class, (serializer, i) -> String.valueOf(i))
-                 .withWriterForClass(Boolean.class, (serializer, bool) -> String.valueOf(bool))
-                 ;
+                 .withWriterForClass(Boolean.class, (serializer, bool) -> String.valueOf(bool));
     }
 
     public GoldenMaster withIgnoreTrailingWhitespace() {
-        return new GoldenMaster(namingStrategy,
-                 fallbackWriter,
-                 classWriters,
-                 true
-        );
+        return new GoldenMaster(namingStrategy, fallbackWriter, classWriters, true, reporter);
+    }
+
+    public GoldenMaster withReporter(Reporter reporter) {
+        return new GoldenMaster(namingStrategy, fallbackWriter, classWriters, ignoreTrailingWhitespace, reporter);
     }
 
     public void verify(Object candidate) {
@@ -197,11 +188,20 @@ public class GoldenMaster {
                      name,
                      FileNamingStrategy.Role.RECEIVED)));
             try {
-                Files.write(receivedPath, received.getBytes());
+                Files.write(receivedPath, received.getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            throw new AssertionFailedError("Master does not match received");
+            if (reporter != null) {
+                reporter.report(masterPath, receivedPath);
+            }
+            String approved;
+            try {
+                approved = new String(Files.readAllBytes(masterPath), StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            throw new AssertionFailedError("Master does not match received", approved, received);
         }
     }
 
