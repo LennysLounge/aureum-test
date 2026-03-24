@@ -79,33 +79,37 @@ public class GoldenMaster {
      */
 
     public static final GoldenMaster DEFAULT_CONFIG = new GoldenMaster()
-            .withFileNamingStrategy(new FileNamePattern()
-                    .fixed("src/test/java/")
-                    .packageAsPath()
-                    .className()
-                    .methodNameWithPrefix(".")
-                    .verificationNameWithPrefixIfPresent(".")
-                    .roleWithPrefix(".")
-                    .fileExtension("txt"))
-            .withFallbackWriter(new Serializer.ToStringWriter())
-            .withCommonWriters()
-            .withComparator(new LineComparator());
+             .withFileNamingStrategy(new FileNamePattern()
+                      .fixed("src/test/java/")
+                      .packageAsPath()
+                      .className()
+                      .methodNameWithPrefix(".")
+                      .verificationNameWithPrefixIfPresent(".")
+                      .roleWithPrefix(".")
+                      .fileExtension("txt"))
+             .withFallbackWriter(new ToStringWriter())
+             .withCommonWriters()
+             .withComparator(new LineComparator());
 
     private final FileNamingStrategy namingStrategy;
-    private final Serializer serializer;
+    private final Writer<Object> fallbackWriter;
+    private final Map<Class<?>, Writer<Object>> classWriters;
     private final Comparator comparator;
 
     public GoldenMaster() {
-        namingStrategy = null;
-        serializer = new Serializer();
-        comparator = null;
+        this.namingStrategy = new FileNamePattern().fixed("master");
+        this.fallbackWriter = new ToStringWriter();
+        this.classWriters = new HashMap<>();
+        this.comparator = new LineComparator();
     }
 
     private GoldenMaster(FileNamingStrategy namingStrategy,
-                         Serializer serializer,
-                         Comparator comparator) {
+             Writer<Object> fallbackWriter,
+             Map<Class<?>, Writer<Object>> classWriters,
+             Comparator comparator) {
         this.namingStrategy = namingStrategy;
-        this.serializer = serializer;
+        this.fallbackWriter = fallbackWriter;
+        this.classWriters = classWriters;
         this.comparator = comparator;
     }
 
@@ -114,52 +118,50 @@ public class GoldenMaster {
     }
 
     public GoldenMaster withFileNamingStrategy(FileNamingStrategy strategy) {
-        return new GoldenMaster(strategy, serializer, comparator);
+        return new GoldenMaster(
+                 strategy,
+                 fallbackWriter,
+                 classWriters,
+                 comparator
+        );
     }
 
     public GoldenMaster withFallbackWriter(Writer<Object> writer) {
-        if (serializer == null) {
-            return new GoldenMaster(
-                    namingStrategy,
-                    new Serializer(writer, new HashMap<>()),
-                    comparator
-            );
-        } else {
-            return new GoldenMaster(
-                    namingStrategy,
-                    new Serializer(writer, new HashMap<>(serializer.classWriters)),
-                    comparator
-            );
-        }
-
-    }
-
-    public GoldenMaster withFallbackWriter(BiFunction<Serializer, Object, String> writer) {
-        return withFallbackWriter(writer::apply);
+        return new GoldenMaster(
+                 namingStrategy,
+                 writer,
+                 classWriters,
+                 comparator
+        );
     }
 
     public <T> GoldenMaster withWriterForClass(Class<T> type, Writer<T> writer) {
-        Map<Class<?>, Writer<Object>> classWriters = new HashMap<>(serializer.classWriters);
+        Map<Class<?>, Writer<Object>> classWriters = new HashMap<>(this.classWriters);
         @SuppressWarnings("unchecked")
         Writer<Object> objectWriter = (Writer<Object>) writer;
         classWriters.put(type, objectWriter);
         return new GoldenMaster(namingStrategy,
-                new Serializer(serializer.defaultWriter, classWriters),
-                comparator
+                 fallbackWriter,
+                 classWriters,
+                 comparator
         );
     }
 
     public GoldenMaster withCommonWriters() {
         return this
-                .withWriterForClass(String.class, (serializer, str) -> "\"" + str + "\"")
-                .withWriterForClass(Integer.class, (serializer, i) -> String.valueOf(i))
-                .withWriterForClass(Boolean.class, (serializer, bool) -> String.valueOf(bool))
-                ;
+                 .withWriterForClass(String.class, (serializer, str) -> "\"" + str + "\"")
+                 .withWriterForClass(Integer.class, (serializer, i) -> String.valueOf(i))
+                 .withWriterForClass(Boolean.class, (serializer, bool) -> String.valueOf(bool))
+                 ;
     }
 
-
     public GoldenMaster withComparator(Comparator comparator) {
-        return new GoldenMaster(namingStrategy, serializer, comparator);
+        return new GoldenMaster(
+                 namingStrategy,
+                 fallbackWriter,
+                 classWriters,
+                 comparator
+        );
     }
 
     public void verify(Object candidate) {
@@ -167,25 +169,11 @@ public class GoldenMaster {
     }
 
     public void verify(Object candidate, String name) {
-        if (namingStrategy == null) {
-            throw new MissingConfigException("The golden master does not have a file naming strategy configured. " +
-                    "Please configure a file naming strategy before trying again");
-        }
-        if (comparator == null) {
-            throw new MissingConfigException("The golden master does not have a comparator configured. " +
-                    "Please configure a comparator before trying again");
-        }
-        if (serializer.getWriter(candidate.getClass()) == null) {
-            throw new MissingConfigException("The golden master does not a serializer configure that can serialize objects of type " + candidate.getClass().getSimpleName() + ". " +
-                    "Please configure a serializer for class " + candidate.getClass().getSimpleName() + " or configure a fallback serializer");
-        }
-
-
         Method currentTestMethod = TestMethodUtil.findCurrentTestMethod();
 
         Path basePath = Paths.get(".")
-                .resolve(System.getProperty("aureum.basePath", "."))
-                .normalize();
+                 .resolve(System.getProperty("aureum.basePath", "."))
+                 .normalize();
 
         Path masterPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod, name, FileNamingStrategy.Role.APPROVED)));
         try {
@@ -196,17 +184,18 @@ public class GoldenMaster {
             throw new RuntimeException(e);
         }
 
+        Serializer serializer = new Serializer(fallbackWriter, classWriters);
         String received = serializer.toString(candidate);
 
         try (InputStream approvedIS = Files.newInputStream(masterPath);
-             InputStream receivedIS = new ByteArrayInputStream(received.getBytes());
+                 InputStream receivedIS = new ByteArrayInputStream(received.getBytes());
         ) {
 
             boolean isEqual = comparator.isEqual(approvedIS, receivedIS);
             if (!isEqual) {
                 Path receivedPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod,
-                        name,
-                        FileNamingStrategy.Role.RECEIVED)));
+                         name,
+                         FileNamingStrategy.Role.RECEIVED)));
                 Files.write(receivedPath, received.getBytes());
                 throw new AssertionFailedError("Master does not match received");
             }
@@ -215,16 +204,11 @@ public class GoldenMaster {
         }
     }
 
-
     public Path resolveFileName(FileNamingStrategy.Role role) {
         return resolveFileName(role, null);
     }
 
     public Path resolveFileName(FileNamingStrategy.Role role, String name) {
-        if (namingStrategy == null) {
-            throw new MissingConfigException("The golden master does not have a file naming strategy configured. " +
-                    "Please configure a file naming strategy before trying again");
-        }
         return namingStrategy.resolve(new FileNamingStrategy.Context(TestMethodUtil.findCurrentTestMethod(), name, role));
     }
 }

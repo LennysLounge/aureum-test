@@ -12,25 +12,17 @@ public class Serializer {
     private int indentLevel = 0;
     private String indent = "";
 
-    Serializer() {
-
-    }
-
     Serializer(Writer<Object> defaultWriter, Map<Class<?>, Writer<Object>> classWriters) {
         this.classWriters = classWriters;
         this.defaultWriter = defaultWriter;
     }
 
-    Writer<Object> getWriter(Class<?> clazz) {
-        Writer<Object> classWriter = classWriters.get(clazz);
-        if (classWriter != null) {
-            return classWriter;
-        }
-        return defaultWriter;
-    }
-
     public String toString(Object o) {
-        return getWriter(o.getClass()).apply(this, o);
+        Writer<Object> classWriter = classWriters.get(o.getClass());
+        if (classWriter != null) {
+            return classWriter.apply(this, o);
+        }
+        return defaultWriter.apply(this, o);
     }
 
     public void increaseIndent() {
@@ -55,14 +47,6 @@ public class Serializer {
 
     public String getIndent() {
         return indent;
-    }
-
-    public static class ToStringWriter implements Writer<Object> {
-
-        @Override
-        public String apply(Serializer serializer, Object o) {
-            return Objects.toString(o);
-        }
     }
 
 }
