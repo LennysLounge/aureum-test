@@ -58,5 +58,4 @@ public class Serializer {
     public String getIndent() {
         return indent;
     }
-
 }

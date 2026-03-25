@@ -1,0 +1,22 @@
+CommonWritersTest.AllCommonWritersInOne[
+    string: "String",
+    primitive_int: 12,
+    boxed_int: 144,
+    primitive_boolean: true,
+    boxed_boolean: true,
+    list_of_strings: [
+        "one",
+        "two",
+        "three",
+    ],
+    array_list_of_strings: [
+        "one",
+        "two",
+        "three",
+    ],
+    linked_list_of_strings: [
+        "one",
+        "two",
+        "three",
+    ],
+]

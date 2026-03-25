@@ -5,6 +5,7 @@ import io.github.lennyslounge.aureum.naming.FileNamingStrategy;
 import io.github.lennyslounge.aureum.reporter.Reporter;
 import io.github.lennyslounge.aureum.reporter.SimpleDiffReporter;
 import io.github.lennyslounge.aureum.util.TestMethodUtil;
+import io.github.lennyslounge.aureum.writer.CommonWriters;
 import io.github.lennyslounge.aureum.writer.ToStringWriter;
 import io.github.lennyslounge.aureum.writer.Writer;
 import org.opentest4j.AssertionFailedError;
@@ -16,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class GoldenMaster {
@@ -158,9 +160,10 @@ public class GoldenMaster {
 
     public GoldenMaster withCommonWriters() {
         return this
-                .withWriterForClass(String.class, (serializer, str) -> "\"" + str + "\"")
-                .withWriterForClass(Integer.class, (serializer, i) -> String.valueOf(i))
-                .withWriterForClass(Boolean.class, (serializer, bool) -> String.valueOf(bool));
+                .withWriterForClass(String.class, CommonWriters::String)
+                .withWriterForClass(Integer.class, CommonWriters::Integer)
+                .withWriterForClass(Boolean.class, CommonWriters::Boolean)
+                .withWriterForSubclassOf(List.class, CommonWriters::List);
     }
 
     public GoldenMaster withIgnoreTrailingWhitespace() {
