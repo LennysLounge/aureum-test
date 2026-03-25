@@ -5,6 +5,8 @@ import io.github.lennyslounge.aureum.SerializerTest;
 import io.github.lennyslounge.aureum.writer.ReflectionWriter;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 public class ReflectionWriterTest {
@@ -89,5 +91,39 @@ public class ReflectionWriterTest {
                         .withPrettyPrinting()
                         .withReplaceFieldWithPlaceholder("uuid", "UUID"))
                 .verify(obj);
+    }
+
+    public static class Foo {
+        public String uuid;
+        public String msg;
+
+        public Foo(String uuid, String msg) {
+            this.uuid = uuid;
+            this.msg = msg;
+        }
+    }
+
+    @Test
+    public void replaceWithOccurrenceCount() {
+        String uuid1 = UUID.randomUUID().toString();
+        String uuid2 = UUID.randomUUID().toString();
+        String uuid3 = UUID.randomUUID().toString();
+
+        List<Foo> foos = Arrays.asList(
+                new Foo(uuid1, "first uuid"),
+                new Foo(uuid2, "second uuid"),
+                new Foo(uuid1, "this is the same as the first one"),
+                new Foo(uuid3, "third uuid"),
+                new Foo(uuid3, "this is the same as the third"),
+                new Foo(uuid2, "this is the same as the second"),
+                new Foo(uuid2, "this is the same as the second"),
+                new Foo(uuid2, "this is the same as the second")
+        );
+
+        GoldenMaster.defaultConfig()
+                .withFallbackWriter(new ReflectionWriter()
+                        .withReplaceFieldWithOccurrence("uuid", "UUID")
+                )
+                .verify(foos);
     }
 }

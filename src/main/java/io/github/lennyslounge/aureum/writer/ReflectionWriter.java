@@ -14,6 +14,10 @@ public class ReflectionWriter implements Writer<Object> {
     private final boolean usePrettyPrinting;
     private final Set<String> ignoreFields;
     private final Map<String, String> replaceWithPlaceholder;
+    private final Map<String, String> replaceWithOccurrence;
+
+    private final Map<String, Integer> uniqueOccurrencesPerPlaceholder = new HashMap<>();
+    private final Map<String, Integer> numberForOccurrence = new HashMap<>();
 
     /*
     - ignore fields of type
@@ -32,33 +36,41 @@ public class ReflectionWriter implements Writer<Object> {
      */
 
     public ReflectionWriter() {
-        this(false, new HashSet<>(), new HashMap<>());
+        this(false, new HashSet<>(), new HashMap<>(), new HashMap<>());
     }
 
     private ReflectionWriter(
             boolean usePrettyPrinting,
             Set<String> ignoreFields,
-            Map<String, String> replaceWithPlaceholder
+            Map<String, String> replaceWithPlaceholder,
+            Map<String, String> replaceWithOccurrence
     ) {
         this.usePrettyPrinting = usePrettyPrinting;
         this.ignoreFields = ignoreFields;
         this.replaceWithPlaceholder = replaceWithPlaceholder;
+        this.replaceWithOccurrence = replaceWithOccurrence;
     }
 
     public ReflectionWriter withPrettyPrinting() {
-        return new ReflectionWriter(true, ignoreFields, replaceWithPlaceholder);
+        return new ReflectionWriter(true, ignoreFields, replaceWithPlaceholder, replaceWithOccurrence);
     }
 
     public ReflectionWriter withIgnoreFields(String... fieldsToIgnore) {
         Set<String> newIgnoreFields = new HashSet<>(this.ignoreFields);
         newIgnoreFields.addAll(Arrays.asList(fieldsToIgnore));
-        return new ReflectionWriter(usePrettyPrinting, newIgnoreFields, replaceWithPlaceholder);
+        return new ReflectionWriter(usePrettyPrinting, newIgnoreFields, replaceWithPlaceholder, replaceWithOccurrence);
     }
 
     public ReflectionWriter withReplaceFieldWithPlaceholder(String fieldName, String placeholder) {
         Map<String, String> newMap = new HashMap<>(this.replaceWithPlaceholder);
         newMap.put(fieldName, placeholder);
-        return new ReflectionWriter(usePrettyPrinting, ignoreFields, newMap);
+        return new ReflectionWriter(usePrettyPrinting, ignoreFields, newMap, replaceWithOccurrence);
+    }
+
+    public ReflectionWriter withReplaceFieldWithOccurrence(String fieldName, String placeholder) {
+        Map<String, String> newMap = new HashMap<>(this.replaceWithOccurrence);
+        newMap.put(fieldName, placeholder);
+        return new ReflectionWriter(usePrettyPrinting, ignoreFields, replaceWithPlaceholder, newMap);
     }
 
     @Override
@@ -72,7 +84,7 @@ public class ReflectionWriter implements Writer<Object> {
         serializer.increaseIndent();
         boolean first = true;
         for (Field field : getAllFieldsInInheritanceChain(clazz)) {
-            FieldValue value = getField(field, o, clazz);
+            FieldValue value = getField(serializer, field, o, clazz);
             if (value.isAccessible) {
                 if (first) {
                     if (usePrettyPrinting) {
@@ -158,13 +170,28 @@ public class ReflectionWriter implements Writer<Object> {
         }
     }
 
-    private FieldValue getField(Field field, Object o, Class<?> clazz) {
+    private FieldValue getField(Serializer serializer, Field field, Object o, Class<?> clazz) {
         if (ignoreFields.contains(field.getName())) {
             return FieldValue.notAccessible();
         }
         String placeholder = replaceWithPlaceholder.get(field.getName());
         if (placeholder != null) {
             return FieldValue.value(new ReplacedValue(placeholder));
+        }
+        String occurrencePlaceholder = replaceWithOccurrence.get(field.getName());
+        if (occurrencePlaceholder != null) {
+            FieldValue fieldValue = getValueOfField(field, o, clazz);
+            if (fieldValue.isAccessible) {
+                String fieldAsString = serializer.toString(fieldValue.value);
+                Integer number = numberForOccurrence.get(fieldAsString);
+                if (number == null) {
+                    number = uniqueOccurrencesPerPlaceholder.merge(occurrencePlaceholder, 1, Integer::sum);
+                    numberForOccurrence.put(fieldAsString, number);
+                }
+                return FieldValue.value(new ReplacedValue(occurrencePlaceholder + "_" + number));
+            } else {
+                return fieldValue;
+            }
         }
         return getValueOfField(field, o, clazz);
     }

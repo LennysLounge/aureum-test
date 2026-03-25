@@ -1,0 +1,10 @@
+[
+    ReflectionWriterTest.Foo[uuid: <UUID_1>, msg: "first uuid"],
+    ReflectionWriterTest.Foo[uuid: <UUID_2>, msg: "second uuid"],
+    ReflectionWriterTest.Foo[uuid: <UUID_1>, msg: "this is the same as the first one"],
+    ReflectionWriterTest.Foo[uuid: <UUID_3>, msg: "third uuid"],
+    ReflectionWriterTest.Foo[uuid: <UUID_3>, msg: "this is the same as the third"],
+    ReflectionWriterTest.Foo[uuid: <UUID_2>, msg: "this is the same as the second"],
+    ReflectionWriterTest.Foo[uuid: <UUID_2>, msg: "this is the same as the second"],
+    ReflectionWriterTest.Foo[uuid: <UUID_2>, msg: "this is the same as the second"],
+]
