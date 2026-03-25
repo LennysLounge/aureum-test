@@ -1,11 +1,7 @@
-package io.github.lennyslounge.aureum;
+package io.github.lennyslounge.aureum.reporter;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
 
 public class IntelliJDiffReporter implements Reporter {
 

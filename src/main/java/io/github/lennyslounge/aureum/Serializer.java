@@ -1,9 +1,9 @@
 package io.github.lennyslounge.aureum;
 
+import io.github.lennyslounge.aureum.writer.Writer;
+
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
-import java.util.function.BiFunction;
 
 public class Serializer {
 

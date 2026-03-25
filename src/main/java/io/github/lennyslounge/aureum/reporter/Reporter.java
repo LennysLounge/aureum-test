@@ -1,4 +1,4 @@
-package io.github.lennyslounge.aureum;
+package io.github.lennyslounge.aureum.reporter;
 
 import java.nio.file.Path;
 

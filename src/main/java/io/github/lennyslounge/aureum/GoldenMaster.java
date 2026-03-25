@@ -1,6 +1,12 @@
 package io.github.lennyslounge.aureum;
 
+import io.github.lennyslounge.aureum.naming.FileNamePattern;
+import io.github.lennyslounge.aureum.naming.FileNamingStrategy;
+import io.github.lennyslounge.aureum.reporter.Reporter;
+import io.github.lennyslounge.aureum.reporter.SimpleDiffReporter;
 import io.github.lennyslounge.aureum.util.TestMethodUtil;
+import io.github.lennyslounge.aureum.writer.ToStringWriter;
+import io.github.lennyslounge.aureum.writer.Writer;
 import org.opentest4j.AssertionFailedError;
 
 import java.io.*;
@@ -11,7 +17,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BiFunction;
 
 public class GoldenMaster {
 
@@ -90,12 +95,12 @@ public class GoldenMaster {
                       .fileExtension("txt"))
              .withFallbackWriter(new ToStringWriter())
              .withCommonWriters()
-             .withReporter(new IntelliJDiffReporter());
-             //.withReporter(new SimpleDiffReporter());
+             //.withReporter(new IntelliJDiffReporter());
+             .withReporter(new SimpleDiffReporter());
 
     private final FileNamingStrategy namingStrategy;
-    private final Writer<Object> fallbackWriter;
-    private final Map<Class<?>, Writer<Object>> classWriters;
+    private final io.github.lennyslounge.aureum.writer.Writer<Object> fallbackWriter;
+    private final Map<Class<?>, io.github.lennyslounge.aureum.writer.Writer<Object>> classWriters;
     private final boolean ignoreTrailingWhitespace;
     private final Reporter reporter;
 
@@ -108,8 +113,8 @@ public class GoldenMaster {
     }
 
     private GoldenMaster(FileNamingStrategy namingStrategy,
-             Writer<Object> fallbackWriter,
-             Map<Class<?>, Writer<Object>> classWriters,
+             io.github.lennyslounge.aureum.writer.Writer<Object> fallbackWriter,
+             Map<Class<?>, io.github.lennyslounge.aureum.writer.Writer<Object>> classWriters,
              boolean ignoreTrailingWhitespace,
              Reporter reporter) {
         this.namingStrategy = namingStrategy;
@@ -127,14 +132,14 @@ public class GoldenMaster {
         return new GoldenMaster(strategy, fallbackWriter, classWriters, ignoreTrailingWhitespace, reporter);
     }
 
-    public GoldenMaster withFallbackWriter(Writer<Object> writer) {
+    public GoldenMaster withFallbackWriter(io.github.lennyslounge.aureum.writer.Writer<Object> writer) {
         return new GoldenMaster(namingStrategy, writer, classWriters, ignoreTrailingWhitespace, reporter);
     }
 
-    public <T> GoldenMaster withWriterForClass(Class<T> type, Writer<T> writer) {
-        Map<Class<?>, Writer<Object>> classWriters = new HashMap<>(this.classWriters);
+    public <T> GoldenMaster withWriterForClass(Class<T> type, io.github.lennyslounge.aureum.writer.Writer<T> writer) {
+        Map<Class<?>, io.github.lennyslounge.aureum.writer.Writer<Object>> classWriters = new HashMap<>(this.classWriters);
         @SuppressWarnings("unchecked")
-        Writer<Object> objectWriter = (Writer<Object>) writer;
+        io.github.lennyslounge.aureum.writer.Writer<Object> objectWriter = (Writer<Object>) writer;
         classWriters.put(type, objectWriter);
         return new GoldenMaster(namingStrategy, fallbackWriter, classWriters, ignoreTrailingWhitespace, reporter);
     }

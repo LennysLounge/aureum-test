@@ -1,0 +1,4 @@
+ReflectionWriterTest.IgnoreFields[
+    uuid: <UUID>,
+    msg: "The uuid field should be there but its value should be replaced with <UUID>",
+]

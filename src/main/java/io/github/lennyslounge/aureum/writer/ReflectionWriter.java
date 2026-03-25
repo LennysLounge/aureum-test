@@ -1,23 +1,24 @@
-package io.github.lennyslounge.aureum;
+package io.github.lennyslounge.aureum.writer;
+
+import io.github.lennyslounge.aureum.Serializer;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class ReflectionWriter implements Writer<Object> {
 
     private final boolean usePrettyPrinting;
+    private final Set<String> ignoreFields;
+    private final Map<String, String> replaceWithPlaceholder;
 
     /*
-    - ignore field
     - ignore fields of type
+    - ignore fields that match regex
     - replace with placeholder
-        > static placeholder e.g. <UUID>
         > counting occurrences e.g.
             every occurrence of 'a' is replaced with <UUID_1>,
             every occurrence of 'b' is replaced with <UUID_2>,
@@ -31,11 +32,33 @@ public class ReflectionWriter implements Writer<Object> {
      */
 
     public ReflectionWriter() {
-        this(false);
+        this(false, new HashSet<>(), new HashMap<>());
     }
 
-    private ReflectionWriter(boolean usePrettyPrinting) {
+    private ReflectionWriter(
+            boolean usePrettyPrinting,
+            Set<String> ignoreFields,
+            Map<String, String> replaceWithPlaceholder
+    ) {
         this.usePrettyPrinting = usePrettyPrinting;
+        this.ignoreFields = ignoreFields;
+        this.replaceWithPlaceholder = replaceWithPlaceholder;
+    }
+
+    public ReflectionWriter withPrettyPrinting() {
+        return new ReflectionWriter(true, ignoreFields, replaceWithPlaceholder);
+    }
+
+    public ReflectionWriter withIgnoreFields(String... fieldsToIgnore) {
+        Set<String> newIgnoreFields = new HashSet<>(this.ignoreFields);
+        newIgnoreFields.addAll(Arrays.asList(fieldsToIgnore));
+        return new ReflectionWriter(usePrettyPrinting, newIgnoreFields, replaceWithPlaceholder);
+    }
+
+    public ReflectionWriter withReplaceFieldWithPlaceholder(String fieldName, String placeholder) {
+        Map<String, String> newMap = new HashMap<>(this.replaceWithPlaceholder);
+        newMap.put(fieldName, placeholder);
+        return new ReflectionWriter(usePrettyPrinting, ignoreFields, newMap);
     }
 
     @Override
@@ -50,8 +73,8 @@ public class ReflectionWriter implements Writer<Object> {
         boolean first = true;
         Field[] fields = clazz.getDeclaredFields();
         for (Field field : fields) {
-            FieldValue value = getValueOfField(field, o, clazz);
-            if (value.isAccessable) {
+            FieldValue value = getField(field, o, clazz);
+            if (value.isAccessible) {
                 if (first) {
                     if (usePrettyPrinting) {
                         sb.append(System.lineSeparator());
@@ -67,9 +90,18 @@ public class ReflectionWriter implements Writer<Object> {
                         sb.append(", ");
                     }
                 }
-                sb.append(field.getName())
-                        .append(": ")
-                        .append(serializer.toString(value.value));
+                if (value.value instanceof ReplacedValue) {
+                    sb.append(field.getName())
+                            .append(": ")
+                            .append("<")
+                            .append(((ReplacedValue) value.value).replacedValue)
+                            .append(">");
+                } else {
+                    sb.append(field.getName())
+                            .append(": ")
+                            .append(serializer.toString(value.value));
+                }
+
             }
         }
         serializer.decreaseIndent();
@@ -79,10 +111,6 @@ public class ReflectionWriter implements Writer<Object> {
         }
         sb.append("]");
         return sb.toString();
-    }
-
-    public ReflectionWriter withPrettyPrinting() {
-        return new ReflectionWriter(true);
     }
 
     private static String getClassName(Class<?> clazz) {
@@ -95,29 +123,56 @@ public class ReflectionWriter implements Writer<Object> {
         return className.toString();
     }
 
+    private static class ReplacedValue {
+        String replacedValue;
+
+        public ReplacedValue(String replacedValue) {
+            this.replacedValue = replacedValue;
+        }
+    }
+
     public static class FieldValue {
         public Object value;
-        public boolean isAccessable;
+        public boolean isAccessible;
 
-        public FieldValue(Object value, boolean isAccessable) {
-            this.value = value;
-            this.isAccessable = isAccessable;
+        public static FieldValue notAccessible() {
+            FieldValue result = new FieldValue();
+            result.isAccessible = false;
+            return result;
         }
+
+        public static FieldValue value(Object value) {
+            FieldValue result = new FieldValue();
+            result.isAccessible = true;
+            result.value = value;
+            return result;
+        }
+    }
+
+    private FieldValue getField(Field field, Object o, Class<?> clazz) {
+        if (ignoreFields.contains(field.getName())) {
+            return FieldValue.notAccessible();
+        }
+        String placeholder = replaceWithPlaceholder.get(field.getName());
+        if (placeholder != null) {
+            return FieldValue.value(new ReplacedValue(placeholder));
+        }
+        return getValueOfField(field, o, clazz);
     }
 
     public static FieldValue getValueOfField(Field field, Object o, Class<?> clazz) {
         if (Modifier.isStatic(field.getModifiers())) {
-            return new FieldValue(null, false);
+            return FieldValue.notAccessible();
         }
         try {
-            return new FieldValue(field.get(o), true);
+            return FieldValue.value(field.get(o));
         } catch (IllegalAccessException ignored) {
         }
         String fieldName = field.getName();
         Set<String> methodNames = new HashSet<>();
         methodNames.add(fieldName);
         methodNames.add("get" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1));
-        if(field.getType() == Boolean.class || field.getType() == boolean.class){
+        if (field.getType() == Boolean.class || field.getType() == boolean.class) {
             methodNames.add("is" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1));
         }
 
@@ -126,13 +181,13 @@ public class ReflectionWriter implements Writer<Object> {
                 .filter(method -> method.getParameterCount() == 0)
                 .findFirst();
         if (!getter.isPresent()) {
-            return new FieldValue(null, false);
+            return FieldValue.notAccessible();
         }
 
         try {
-            return new FieldValue(getter.get().invoke(o), true);
+            return FieldValue.value(getter.get().invoke(o));
         } catch (IllegalAccessException | InvocationTargetException e) {
-            return new FieldValue(null, false);
+            return FieldValue.notAccessible();
         }
     }
 

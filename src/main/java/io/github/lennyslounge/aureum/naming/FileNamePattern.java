@@ -1,4 +1,4 @@
-package io.github.lennyslounge.aureum;
+package io.github.lennyslounge.aureum.naming;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;

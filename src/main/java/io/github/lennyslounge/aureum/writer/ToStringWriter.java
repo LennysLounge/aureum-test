@@ -1,4 +1,6 @@
-package io.github.lennyslounge.aureum;
+package io.github.lennyslounge.aureum.writer;
+
+import io.github.lennyslounge.aureum.Serializer;
 
 import java.util.Objects;
 

@@ -1,5 +1,6 @@
 package io.github.lennyslounge.aureum;
 
+import io.github.lennyslounge.aureum.naming.FileNamingStrategy;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 
