@@ -1,0 +1,4 @@
+ReflectionWriterTest.DerivedClass[
+    parentField: "parent class field",
+    derivedField: "derived class field",
+]

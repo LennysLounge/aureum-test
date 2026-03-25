@@ -71,8 +71,7 @@ public class ReflectionWriter implements Writer<Object> {
 
         serializer.increaseIndent();
         boolean first = true;
-        Field[] fields = clazz.getDeclaredFields();
-        for (Field field : fields) {
+        for (Field field : getAllFieldsInInheritanceChain(clazz)) {
             FieldValue value = getField(field, o, clazz);
             if (value.isAccessible) {
                 if (first) {
@@ -111,6 +110,16 @@ public class ReflectionWriter implements Writer<Object> {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    public static List<Field> getAllFieldsInInheritanceChain(Class<?> clazz) {
+        List<Field> fields = new ArrayList<>(Arrays.asList(clazz.getDeclaredFields()));
+        Class<?> superClass = clazz.getSuperclass();
+        while (superClass != null && superClass != Object.class) {
+            fields.addAll(0, Arrays.asList(superClass.getDeclaredFields()));
+            superClass = superClass.getSuperclass();
+        }
+        return fields;
     }
 
     private static String getClassName(Class<?> clazz) {

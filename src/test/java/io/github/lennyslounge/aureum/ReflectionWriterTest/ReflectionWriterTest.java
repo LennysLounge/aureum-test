@@ -1,6 +1,7 @@
 package io.github.lennyslounge.aureum.ReflectionWriterTest;
 
 import io.github.lennyslounge.aureum.GoldenMaster;
+import io.github.lennyslounge.aureum.SerializerTest;
 import io.github.lennyslounge.aureum.writer.ReflectionWriter;
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +45,23 @@ public class ReflectionWriterTest {
             this.uuid = uuid;
             this.msg = msg;
         }
+    }
+
+    public static class ParentClass {
+        public String parentField = "parent class field";
+    }
+
+    public static class DerivedClass extends ParentClass {
+        public String derivedField = "derived class field";
+    }
+
+    @Test
+    public void fieldsFromParentClass() {
+        DerivedClass derived = new DerivedClass();
+
+        GoldenMaster.defaultConfig()
+                .withFallbackWriter(new ReflectionWriter().withPrettyPrinting())
+                .verify(derived);
     }
 
     @Test

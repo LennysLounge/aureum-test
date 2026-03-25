@@ -85,22 +85,23 @@ public class GoldenMaster {
      */
 
     public static final GoldenMaster DEFAULT_CONFIG = new GoldenMaster()
-             .withFileNamingStrategy(new FileNamePattern()
-                      .fixed("src/test/java/")
-                      .packageAsPath()
-                      .className()
-                      .methodNameWithPrefix(".")
-                      .verificationNameWithPrefixIfPresent(".")
-                      .roleWithPrefix(".")
-                      .fileExtension("txt"))
-             .withFallbackWriter(new ToStringWriter())
-             .withCommonWriters()
-             //.withReporter(new IntelliJDiffReporter());
-             .withReporter(new SimpleDiffReporter());
+            .withFileNamingStrategy(new FileNamePattern()
+                    .fixed("src/test/java/")
+                    .packageAsPath()
+                    .className()
+                    .methodNameWithPrefix(".")
+                    .verificationNameWithPrefixIfPresent(".")
+                    .roleWithPrefix(".")
+                    .fileExtension("txt"))
+            .withFallbackWriter(new ToStringWriter())
+            .withCommonWriters()
+            //.withReporter(new IntelliJDiffReporter());
+            .withReporter(new SimpleDiffReporter());
 
     private final FileNamingStrategy namingStrategy;
-    private final io.github.lennyslounge.aureum.writer.Writer<Object> fallbackWriter;
-    private final Map<Class<?>, io.github.lennyslounge.aureum.writer.Writer<Object>> classWriters;
+    private final Writer<Object> fallbackWriter;
+    private final Map<Class<?>, Writer<Object>> classWriters;
+    private final Map<Class<?>, Writer<Object>> subclassWriters;
     private final boolean ignoreTrailingWhitespace;
     private final Reporter reporter;
 
@@ -108,18 +109,21 @@ public class GoldenMaster {
         this.namingStrategy = new FileNamePattern().fixed("master");
         this.fallbackWriter = new ToStringWriter();
         this.classWriters = new HashMap<>();
+        this.subclassWriters = new HashMap<>();
         this.ignoreTrailingWhitespace = false;
         this.reporter = null;
     }
 
     private GoldenMaster(FileNamingStrategy namingStrategy,
-             io.github.lennyslounge.aureum.writer.Writer<Object> fallbackWriter,
-             Map<Class<?>, io.github.lennyslounge.aureum.writer.Writer<Object>> classWriters,
-             boolean ignoreTrailingWhitespace,
-             Reporter reporter) {
+                         Writer<Object> fallbackWriter,
+                         Map<Class<?>, Writer<Object>> classWriters,
+                         Map<Class<?>, Writer<Object>> subclassWriters,
+                         boolean ignoreTrailingWhitespace,
+                         Reporter reporter) {
         this.namingStrategy = namingStrategy;
         this.fallbackWriter = fallbackWriter;
         this.classWriters = classWriters;
+        this.subclassWriters = subclassWriters;
         this.ignoreTrailingWhitespace = ignoreTrailingWhitespace;
         this.reporter = reporter;
     }
@@ -129,34 +133,42 @@ public class GoldenMaster {
     }
 
     public GoldenMaster withFileNamingStrategy(FileNamingStrategy strategy) {
-        return new GoldenMaster(strategy, fallbackWriter, classWriters, ignoreTrailingWhitespace, reporter);
+        return new GoldenMaster(strategy, fallbackWriter, classWriters, subclassWriters, ignoreTrailingWhitespace, reporter);
     }
 
-    public GoldenMaster withFallbackWriter(io.github.lennyslounge.aureum.writer.Writer<Object> writer) {
-        return new GoldenMaster(namingStrategy, writer, classWriters, ignoreTrailingWhitespace, reporter);
+    public GoldenMaster withFallbackWriter(Writer<Object> writer) {
+        return new GoldenMaster(namingStrategy, writer, classWriters, subclassWriters, ignoreTrailingWhitespace, reporter);
     }
 
-    public <T> GoldenMaster withWriterForClass(Class<T> type, io.github.lennyslounge.aureum.writer.Writer<T> writer) {
-        Map<Class<?>, io.github.lennyslounge.aureum.writer.Writer<Object>> classWriters = new HashMap<>(this.classWriters);
+    public <T> GoldenMaster withWriterForClass(Class<T> type, Writer<T> writer) {
+        Map<Class<?>, Writer<Object>> classWriters = new HashMap<>(this.classWriters);
         @SuppressWarnings("unchecked")
-        io.github.lennyslounge.aureum.writer.Writer<Object> objectWriter = (Writer<Object>) writer;
+        Writer<Object> objectWriter = (Writer<Object>) writer;
         classWriters.put(type, objectWriter);
-        return new GoldenMaster(namingStrategy, fallbackWriter, classWriters, ignoreTrailingWhitespace, reporter);
+        return new GoldenMaster(namingStrategy, fallbackWriter, classWriters, subclassWriters, ignoreTrailingWhitespace, reporter);
+    }
+
+    public <T> GoldenMaster withWriterForSubclassOf(Class<T> type, Writer<T> writer) {
+        Map<Class<?>, Writer<Object>> subclassWriters = new HashMap<>(this.subclassWriters);
+        @SuppressWarnings("unchecked")
+        Writer<Object> objectWriter = (Writer<Object>) writer;
+        subclassWriters.put(type, objectWriter);
+        return new GoldenMaster(namingStrategy, fallbackWriter, classWriters, subclassWriters, ignoreTrailingWhitespace, reporter);
     }
 
     public GoldenMaster withCommonWriters() {
         return this
-                 .withWriterForClass(String.class, (serializer, str) -> "\"" + str + "\"")
-                 .withWriterForClass(Integer.class, (serializer, i) -> String.valueOf(i))
-                 .withWriterForClass(Boolean.class, (serializer, bool) -> String.valueOf(bool));
+                .withWriterForClass(String.class, (serializer, str) -> "\"" + str + "\"")
+                .withWriterForClass(Integer.class, (serializer, i) -> String.valueOf(i))
+                .withWriterForClass(Boolean.class, (serializer, bool) -> String.valueOf(bool));
     }
 
     public GoldenMaster withIgnoreTrailingWhitespace() {
-        return new GoldenMaster(namingStrategy, fallbackWriter, classWriters, true, reporter);
+        return new GoldenMaster(namingStrategy, fallbackWriter, classWriters, subclassWriters, true, reporter);
     }
 
     public GoldenMaster withReporter(Reporter reporter) {
-        return new GoldenMaster(namingStrategy, fallbackWriter, classWriters, ignoreTrailingWhitespace, reporter);
+        return new GoldenMaster(namingStrategy, fallbackWriter, classWriters, subclassWriters, ignoreTrailingWhitespace, reporter);
     }
 
     public void verify(Object candidate) {
@@ -164,7 +176,7 @@ public class GoldenMaster {
     }
 
     public void verify(Object candidate, String name) {
-        Serializer serializer = new Serializer(fallbackWriter, classWriters);
+        Serializer serializer = new Serializer(fallbackWriter, classWriters, subclassWriters);
         verify(serializer.toString(candidate), name);
     }
 
@@ -176,8 +188,8 @@ public class GoldenMaster {
         Method currentTestMethod = TestMethodUtil.findCurrentTestMethod();
 
         Path basePath = Paths.get(".")
-                 .resolve(System.getProperty("aureum.basePath", "."))
-                 .normalize();
+                .resolve(System.getProperty("aureum.basePath", "."))
+                .normalize();
 
         Path masterPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod, name, FileNamingStrategy.Role.APPROVED)));
         try {
@@ -190,8 +202,8 @@ public class GoldenMaster {
 
         if (!isEqual(masterPath, received)) {
             Path receivedPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod,
-                     name,
-                     FileNamingStrategy.Role.RECEIVED)));
+                    name,
+                    FileNamingStrategy.Role.RECEIVED)));
             try {
                 Files.write(receivedPath, received.getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
@@ -213,7 +225,7 @@ public class GoldenMaster {
     public boolean isEqual(Path approvedFile, String received) {
         // Wrap streams in Readers to handle UTF-8 decoding and line breaking safely
         try (BufferedReader approvedReader = Files.newBufferedReader(approvedFile, StandardCharsets.UTF_8);
-                 BufferedReader receivedReader = new BufferedReader(new StringReader(received))) {
+             BufferedReader receivedReader = new BufferedReader(new StringReader(received))) {
 
             String approvedLine;
             String receivedLine;
