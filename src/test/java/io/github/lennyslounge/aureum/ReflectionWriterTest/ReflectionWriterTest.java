@@ -1,7 +1,6 @@
 package io.github.lennyslounge.aureum.ReflectionWriterTest;
 
 import io.github.lennyslounge.aureum.GoldenMaster;
-import io.github.lennyslounge.aureum.SerializerTest;
 import io.github.lennyslounge.aureum.writer.ReflectionWriter;
 import org.junit.jupiter.api.Test;
 
@@ -16,12 +15,12 @@ public class ReflectionWriterTest {
         ClassWithDifferentFeatures c = new ClassWithDifferentFeatures();
 
         GoldenMaster.defaultConfig()
-                .withFallbackWriter(new ReflectionWriter().withPrettyPrinting())
-                .verify(c);
+                 .withFallbackWriter(new ReflectionWriter<>().withPrettyPrinting())
+                 .verify(c);
     }
 
-
     public static class InnerClass {
+
         public int publicField = 12;
         private String privateString = "ok";
 
@@ -35,11 +34,12 @@ public class ReflectionWriterTest {
         InnerClass ic = new InnerClass();
 
         GoldenMaster.defaultConfig()
-                .withFallbackWriter(new ReflectionWriter().withPrettyPrinting())
-                .verify(ic);
+                 .withFallbackWriter(new ReflectionWriter<>().withPrettyPrinting())
+                 .verify(ic);
     }
 
     public static class IgnoreFields {
+
         public String uuid;
         public String msg;
 
@@ -50,10 +50,12 @@ public class ReflectionWriterTest {
     }
 
     public static class ParentClass {
+
         public String parentField = "parent class field";
     }
 
     public static class DerivedClass extends ParentClass {
+
         public String derivedField = "derived class field";
     }
 
@@ -62,38 +64,39 @@ public class ReflectionWriterTest {
         DerivedClass derived = new DerivedClass();
 
         GoldenMaster.defaultConfig()
-                .withFallbackWriter(new ReflectionWriter().withPrettyPrinting())
-                .verify(derived);
+                 .withFallbackWriter(new ReflectionWriter<>().withPrettyPrinting())
+                 .verify(derived);
     }
 
     @Test
     public void ignoreFields() {
         IgnoreFields obj = new IgnoreFields(
-                UUID.randomUUID().toString(),
-                "This should not contain the uuid field");
+                 UUID.randomUUID().toString(),
+                 "This should not contain the uuid field");
 
         GoldenMaster.defaultConfig()
-                .withFallbackWriter(new ReflectionWriter()
-                        .withPrettyPrinting()
-                        .withIgnoreFields("uuid"))
-                .verify(obj);
+                 .withFallbackWriter(new ReflectionWriter<>()
+                          .withPrettyPrinting()
+                          .withIgnoreFields("uuid"))
+                 .verify(obj);
 
     }
 
     @Test
     public void replaceFieldWithPlaceholder() {
         IgnoreFields obj = new IgnoreFields(
-                UUID.randomUUID().toString(),
-                "The uuid field should be there but its value should be replaced with <UUID>");
+                 UUID.randomUUID().toString(),
+                 "The uuid field should be there but its value should be replaced with <UUID>");
 
         GoldenMaster.defaultConfig()
-                .withFallbackWriter(new ReflectionWriter()
-                        .withPrettyPrinting()
-                        .withReplaceFieldWithPlaceholder("uuid", "UUID"))
-                .verify(obj);
+                 .withFallbackWriter(new ReflectionWriter<>()
+                          .withPrettyPrinting()
+                          .withReplaceFieldWithPlaceholder("uuid", "UUID"))
+                 .verify(obj);
     }
 
     public static class Foo {
+
         public String uuid;
         public String msg;
 
@@ -110,20 +113,69 @@ public class ReflectionWriterTest {
         String uuid3 = UUID.randomUUID().toString();
 
         List<Foo> foos = Arrays.asList(
-                new Foo(uuid1, "first uuid"),
-                new Foo(uuid2, "second uuid"),
-                new Foo(uuid1, "this is the same as the first one"),
-                new Foo(uuid3, "third uuid"),
-                new Foo(uuid3, "this is the same as the third"),
-                new Foo(uuid2, "this is the same as the second"),
-                new Foo(uuid2, "this is the same as the second"),
-                new Foo(uuid2, "this is the same as the second")
+                 new Foo(uuid1, "first uuid"),
+                 new Foo(uuid2, "second uuid"),
+                 new Foo(uuid1, "this is the same as the first one"),
+                 new Foo(uuid3, "third uuid"),
+                 new Foo(uuid3, "this is the same as the third"),
+                 new Foo(uuid2, "this is the same as the second"),
+                 new Foo(uuid2, "this is the same as the second"),
+                 new Foo(uuid2, "this is the same as the second")
         );
 
         GoldenMaster.defaultConfig()
-                .withFallbackWriter(new ReflectionWriter()
-                        .withReplaceFieldWithOccurrence("uuid", "UUID")
-                )
-                .verify(foos);
+                 .withFallbackWriter(new ReflectionWriter<>()
+                          .withReplaceFieldWithOccurrence("uuid", "UUID")
+                 )
+                 .verify(foos);
+    }
+
+    public static class Container {
+
+        public String uuid;
+        public List<Item> items;
+
+        public Container(String uuid, List<Item> items) {
+            this.uuid = uuid;
+            this.items = items;
+        }
+    }
+
+    public static class Item {
+
+        public String uuid;
+        public String containerUuid;
+
+        Item(String uuid, String containerUuid) {
+            this.uuid = uuid;
+            this.containerUuid = containerUuid;
+        }
+    }
+
+    @Test
+    public void replaceWithOccurrenceInMultipleClasses() {
+        String uuid1 = UUID.randomUUID().toString();
+        String uuid2 = UUID.randomUUID().toString();
+
+        List<Container> containers = Arrays.asList(
+                 new Container(uuid1, Arrays.asList(
+                          new Item(UUID.randomUUID().toString(), uuid1),
+                          new Item(UUID.randomUUID().toString(), uuid1)
+                 )),
+                 new Container(uuid2, Arrays.asList(
+                          new Item(UUID.randomUUID().toString(), uuid2),
+                          new Item(UUID.randomUUID().toString(), uuid2),
+                          new Item(UUID.randomUUID().toString(), uuid2)
+                 ))
+        );
+
+        GoldenMaster.defaultConfig()
+                 .withWriterForClass(Container.class, new ReflectionWriter<Container>()
+                          .withReplaceFieldWithOccurrence("uuid", "UUID"))
+                 .withWriterForClass(Item.class, new ReflectionWriter<Item>()
+                          .withReplaceFieldWithOccurrence("uuid", "UUID")
+                          .withReplaceFieldWithOccurrence("containerUuid", "UUID")
+                 )
+                 .verify(containers);
     }
 }

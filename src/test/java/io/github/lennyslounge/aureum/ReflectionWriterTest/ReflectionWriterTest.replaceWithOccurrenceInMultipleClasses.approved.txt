@@ -1,0 +1,11 @@
+[
+    ReflectionWriterTest.Container[uuid: <UUID_1>, items: [
+            ReflectionWriterTest.Item[uuid: <UUID_2>, containerUuid: <UUID_1>],
+            ReflectionWriterTest.Item[uuid: <UUID_3>, containerUuid: <UUID_1>],
+        ]],
+    ReflectionWriterTest.Container[uuid: <UUID_4>, items: [
+            ReflectionWriterTest.Item[uuid: <UUID_5>, containerUuid: <UUID_4>],
+            ReflectionWriterTest.Item[uuid: <UUID_6>, containerUuid: <UUID_4>],
+            ReflectionWriterTest.Item[uuid: <UUID_7>, containerUuid: <UUID_4>],
+        ]],
+]
