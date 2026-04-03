@@ -11,7 +11,7 @@ public class SimpleDiffReporter implements Reporter {
     private static final int MAX_SHOWN_DIFFS = 10;
 
     @Override
-    public void report(Path approvedFile, Path receivedFile) {
+    public Reporter.Result report(Path approvedFile, Path receivedFile) {
         List<String> approved;
         List<String> received;
         try {
@@ -48,5 +48,6 @@ public class SimpleDiffReporter implements Reporter {
         if (remainingDiffs > 0) {
             System.out.println(remainingDiffs + " more lines differ");
         }
+        return Result.SUCCESS;
     }
 }

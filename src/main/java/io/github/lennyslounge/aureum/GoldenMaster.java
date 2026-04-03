@@ -2,6 +2,7 @@ package io.github.lennyslounge.aureum;
 
 import io.github.lennyslounge.aureum.naming.FileNamePattern;
 import io.github.lennyslounge.aureum.naming.FileNamingStrategy;
+import io.github.lennyslounge.aureum.reporter.IntelliJDiffReporter;
 import io.github.lennyslounge.aureum.reporter.Reporter;
 import io.github.lennyslounge.aureum.reporter.SimpleDiffReporter;
 import io.github.lennyslounge.aureum.util.TestMethodUtil;
@@ -97,8 +98,7 @@ public class GoldenMaster {
                     .fileExtension("txt"))
             .withFallbackWriter(new ToStringWriter())
             .withCommonWriters()
-            //.withReporter(new IntelliJDiffReporter());
-            .withReporter(new SimpleDiffReporter());
+            .withReporter(new IntelliJDiffReporter());
 
     private final FileNamingStrategy namingStrategy;
     private final Writer<Object> fallbackWriter;
