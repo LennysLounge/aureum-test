@@ -5,6 +5,7 @@ import io.github.lennyslounge.aureum.naming.FileNamingStrategy;
 import io.github.lennyslounge.aureum.reporter.IntelliJDiffReporter;
 import io.github.lennyslounge.aureum.reporter.Reporter;
 import io.github.lennyslounge.aureum.reporter.SimpleDiffReporter;
+import io.github.lennyslounge.aureum.reporter.VSCodeDiffReporter;
 import io.github.lennyslounge.aureum.util.TestMethodUtil;
 import io.github.lennyslounge.aureum.writer.CommonWriters;
 import io.github.lennyslounge.aureum.writer.ToStringWriter;
@@ -98,7 +99,11 @@ public class GoldenMaster {
                     .fileExtension("txt"))
             .withFallbackWriter(new ToStringWriter())
             .withCommonWriters()
-            .withReporter(new IntelliJDiffReporter());
+            .withReporter(new Reporter.FirstSuccessful(
+                    new VSCodeDiffReporter(),
+                    new IntelliJDiffReporter(),
+                    new SimpleDiffReporter()
+            ));
 
     private final FileNamingStrategy namingStrategy;
     private final Writer<Object> fallbackWriter;
