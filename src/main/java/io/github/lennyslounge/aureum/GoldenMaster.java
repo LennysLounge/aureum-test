@@ -218,6 +218,7 @@ public class GoldenMaster {
                 throw new RuntimeException(e);
             }
             if (reporter != null) {
+                reporter.readConfig(new Config());
                 reporter.report(masterPath, receivedPath);
             }
             String approved;

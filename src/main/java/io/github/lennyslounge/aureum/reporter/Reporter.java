@@ -1,9 +1,14 @@
 package io.github.lennyslounge.aureum.reporter;
 
+import io.github.lennyslounge.aureum.Config;
+
 import java.nio.file.Path;
 
 public interface Reporter {
     Result report(Path approvedFile, Path receivedFile);
+
+    default void readConfig(Config config) {
+    }
 
     enum Result {
         SUCCESS,
@@ -27,6 +32,13 @@ public interface Reporter {
             }
             return result;
         }
+
+        @Override
+        public void readConfig(Config config) {
+            for (Reporter r : reporters) {
+                r.readConfig(config);
+            }
+        }
     }
 
     class FirstSuccessful implements Reporter {
@@ -44,6 +56,13 @@ public interface Reporter {
                 }
             }
             return Result.FAILED;
+        }
+
+        @Override
+        public void readConfig(Config config) {
+            for (Reporter r : reporters) {
+                r.readConfig(config);
+            }
         }
     }
 }

@@ -1,5 +1,7 @@
 package io.github.lennyslounge.aureum.reporter;
 
+import io.github.lennyslounge.aureum.Config;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -8,10 +10,15 @@ import java.util.List;
 
 public class SimpleDiffReporter implements Reporter {
 
-    private static final int MAX_SHOWN_DIFFS = 10;
+
+    private boolean enabled;
+    private int maxDiffs;
 
     @Override
-    public Reporter.Result report(Path approvedFile, Path receivedFile) {
+    public Result report(Path approvedFile, Path receivedFile) {
+        if (!enabled) {
+            return Result.FAILED;
+        }
         List<String> approved;
         List<String> received;
         try {
@@ -35,7 +42,7 @@ public class SimpleDiffReporter implements Reporter {
             boolean equal = approvedLine != null && receivedLine != null && approvedLine.equals(receivedLine);
             if (equal) continue;
 
-            if (shownDiffs >= MAX_SHOWN_DIFFS) {
+            if (shownDiffs >= maxDiffs) {
                 remainingDiffs++;
                 continue;
             }
@@ -49,5 +56,19 @@ public class SimpleDiffReporter implements Reporter {
             System.out.println(remainingDiffs + " more lines differ");
         }
         return Result.SUCCESS;
+    }
+
+    @Override
+    public void readConfig(Config config) {
+        enabled = config.getBoolean(
+                "aureum.SimpleDiffReporter.enabled",
+                true,
+                "Whether this reporter will be used to report a failed verification"
+        );
+        maxDiffs = config.getInteger(
+                "aureum.SimpleDiffReporter.maxDiffs",
+                10,
+                "The maximum amount of diff lines shown before printing \"x more lines differ\""
+        );
     }
 }

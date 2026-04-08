@@ -1,5 +1,6 @@
 package io.github.lennyslounge.aureum.reporter;
 
+import io.github.lennyslounge.aureum.Config;
 import io.github.lennyslounge.aureum.util.Os;
 
 import java.io.IOException;
@@ -7,8 +8,13 @@ import java.nio.file.Path;
 
 public class IntelliJDiffReporter implements Reporter {
 
+    private boolean enabled;
+
     @Override
     public Reporter.Result report(Path approvedFile, Path receivedFile) {
+        if (!enabled) {
+            return Result.FAILED;
+        }
         switch (Os.getOs()) {
             case WINDOWS:
                 openWindows(approvedFile, receivedFile);
@@ -20,6 +26,15 @@ public class IntelliJDiffReporter implements Reporter {
             default:
                 return Result.FAILED;
         }
+    }
+
+    @Override
+    public void readConfig(Config config) {
+        enabled = config.getBoolean(
+                "aureum.IntelliJDiffReporter.enabled",
+                true,
+                "Whether this reporter will be used to report a failed verification"
+        );
     }
 
     private void openWindows(Path approvedFile, Path receivedFile) {
