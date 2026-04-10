@@ -2,14 +2,12 @@ package io.github.lennyslounge.aureum;
 
 import io.github.lennyslounge.aureum.naming.FileNamePattern;
 import io.github.lennyslounge.aureum.naming.FileNamingStrategy;
-import io.github.lennyslounge.aureum.reporter.IntelliJDiffReporter;
-import io.github.lennyslounge.aureum.reporter.Reporter;
-import io.github.lennyslounge.aureum.reporter.SimpleDiffReporter;
-import io.github.lennyslounge.aureum.reporter.VSCodeDiffReporter;
+import io.github.lennyslounge.aureum.reporter.*;
 import io.github.lennyslounge.aureum.util.TestMethodUtil;
 import io.github.lennyslounge.aureum.writer.CommonWriters;
 import io.github.lennyslounge.aureum.writer.ToStringWriter;
 import io.github.lennyslounge.aureum.writer.Writer;
+import org.junit.jupiter.api.DisplayNameGenerator;
 import org.opentest4j.AssertionFailedError;
 
 import java.io.*;
@@ -99,11 +97,7 @@ public class GoldenMaster {
                     .fileExtension("txt"))
             .withFallbackWriter(new ToStringWriter())
             .withCommonWriters()
-            .withReporter(new Reporter.FirstSuccessful(
-                    new VSCodeDiffReporter(),
-                    new IntelliJDiffReporter(),
-                    new SimpleDiffReporter()
-            ));
+            .withReporter(new DiffReporter().withCommonReporters());
 
     private final FileNamingStrategy namingStrategy;
     private final Writer<Object> fallbackWriter;
@@ -208,6 +202,10 @@ public class GoldenMaster {
             throw new RuntimeException(e);
         }
 
+        if (reporter != null) {
+            reporter.readConfig(new Config());
+        }
+
         if (!isEqual(masterPath, received)) {
             Path receivedPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod,
                     name,
@@ -218,7 +216,6 @@ public class GoldenMaster {
                 throw new RuntimeException(e);
             }
             if (reporter != null) {
-                reporter.readConfig(new Config());
                 reporter.report(masterPath, receivedPath);
             }
             String approved;
