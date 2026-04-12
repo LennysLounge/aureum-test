@@ -99,12 +99,12 @@ public class GoldenMaster {
             .withCommonWriters()
             .withReporter(new DiffReporter().withCommonReporters());
 
-    private final FileNamingStrategy namingStrategy;
-    private final Writer<Object> fallbackWriter;
-    private final Map<Class<?>, Writer<Object>> classWriters;
-    private final Map<Class<?>, Writer<Object>> subclassWriters;
-    private final boolean ignoreTrailingWhitespace;
-    private final Reporter reporter;
+    final FileNamingStrategy namingStrategy;
+    final Writer<Object> fallbackWriter;
+    final Map<Class<?>, Writer<Object>> classWriters;
+    final Map<Class<?>, Writer<Object>> subclassWriters;
+    final boolean ignoreTrailingWhitespace;
+    final Reporter reporter;
 
     public GoldenMaster() {
         this.namingStrategy = new FileNamePattern().fixed("master");
@@ -178,8 +178,7 @@ public class GoldenMaster {
     }
 
     public void verify(Object candidate, String name) {
-        Serializer serializer = new Serializer(fallbackWriter, classWriters, subclassWriters);
-        verify(serializer.toString(candidate), name);
+        verify(serialize(candidate), name);
     }
 
     public void verify(String received) {
@@ -187,16 +186,15 @@ public class GoldenMaster {
     }
 
     public void verify(String received, String name) {
-        Method currentTestMethod = TestMethodUtil.findCurrentTestMethod();
-
+        Method testMethod = TestMethodUtil.findCurrentTestMethod();
         Path basePath = Paths.get(".")
                 .resolve(System.getProperty("aureum.basePath", "."))
                 .normalize();
 
-        Path masterPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod, name, FileNamingStrategy.Role.APPROVED)));
+        Path approvedFile = resolveFileName(FileNamingStrategy.Role.APPROVED, name, testMethod, basePath);
         try {
-            if (!Files.exists(masterPath)) {
-                Files.createFile(masterPath);
+            if (!Files.exists(approvedFile)) {
+                Files.createFile(approvedFile);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -206,29 +204,13 @@ public class GoldenMaster {
             reporter.readConfig(new Config());
         }
 
-        if (!isEqual(masterPath, received)) {
-            Path receivedPath = basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(currentTestMethod,
-                    name,
-                    FileNamingStrategy.Role.RECEIVED)));
-            try {
-                Files.write(receivedPath, received.getBytes(StandardCharsets.UTF_8));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            if (reporter != null) {
-                reporter.report(masterPath, receivedPath);
-            }
-            String approved;
-            try {
-                approved = new String(Files.readAllBytes(masterPath), StandardCharsets.UTF_8);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            throw new AssertionFailedError("Master does not match received", approved, received);
+        if (!isEqual(approvedFile, received)) {
+            Path receivedPath = resolveFileName(FileNamingStrategy.Role.RECEIVED, name, testMethod, basePath);
+            openReporterAndThrow(approvedFile, receivedPath, received, null);
         }
     }
 
-    public boolean isEqual(Path approvedFile, String received) {
+    boolean isEqual(Path approvedFile, String received) {
         // Wrap streams in Readers to handle UTF-8 decoding and line breaking safely
         try (BufferedReader approvedReader = Files.newBufferedReader(approvedFile, StandardCharsets.UTF_8);
              BufferedReader receivedReader = new BufferedReader(new StringReader(received))) {
@@ -265,11 +247,50 @@ public class GoldenMaster {
         }
     }
 
+    void openReporterAndThrow(Path approvedPath, Path receivedPath, String received, String subline) {
+        try {
+            Files.write(receivedPath, received.getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        if (reporter != null) {
+            reporter.report(approvedPath, receivedPath);
+        }
+        String approved;
+        try {
+            approved = new String(Files.readAllBytes(approvedPath), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        String message = "Approved content does not match received.";
+        if (subline != null) {
+            message += System.lineSeparator() + subline;
+        }
+        message += System.lineSeparator();
+        throw new AssertionFailedError(message, approved, received);
+    }
+
     public Path resolveFileName(FileNamingStrategy.Role role) {
         return resolveFileName(role, null);
     }
 
     public Path resolveFileName(FileNamingStrategy.Role role, String name) {
-        return namingStrategy.resolve(new FileNamingStrategy.Context(TestMethodUtil.findCurrentTestMethod(), name, role));
+        Path basePath = Paths.get(".")
+                .resolve(System.getProperty("aureum.basePath", "."))
+                .normalize();
+        return resolveFileName(role, name, TestMethodUtil.findCurrentTestMethod(), basePath);
+    }
+
+    public MultiSectionGoldenMaster asMultiSectionVerifier() {
+        return new MultiSectionGoldenMaster(this);
+    }
+
+    Path resolveFileName(FileNamingStrategy.Role role, String name, Method testMethod, Path basePath) {
+        return basePath.resolve(namingStrategy.resolve(new FileNamingStrategy.Context(testMethod, name, role)));
+    }
+
+    String serialize(Object candidate) {
+        Serializer serializer = new Serializer(fallbackWriter, classWriters, subclassWriters);
+        return serializer.toString(candidate);
     }
 }

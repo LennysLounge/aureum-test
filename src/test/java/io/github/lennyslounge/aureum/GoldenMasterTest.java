@@ -12,12 +12,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class GoldenMasterTest {
 
     @Test
-    public void shouldNotThrow(){
+    public void shouldNotThrow() {
         GoldenMasters.verify("Hello World!");
     }
 
     @Test
-    public void shouldThrow(){
+    public void shouldThrow() {
         assertThatThrownBy(() -> GoldenMasters.verify("Hello World"))
                 .isInstanceOf(AssertionFailedError.class);
 
@@ -28,9 +28,9 @@ public class GoldenMasterTest {
     }
 
     @Test
-    public void shouldCreateApprovedAndReceivedFilesAndThrow(){
+    public void shouldCreateApprovedAndReceivedFilesAndThrow() {
         assertThatThrownBy(() -> GoldenMasters.verify("Hello World"))
-                 .isInstanceOf(AssertionFailedError.class);
+                .isInstanceOf(AssertionFailedError.class);
 
         Path approvedFile = Paths.get("src/test/java/io/github/lennyslounge/aureum/GoldenMasterTest.shouldCreateApprovedAndReceivedFilesAndThrow.approved.txt");
         assertThat(approvedFile).exists();
@@ -42,13 +42,25 @@ public class GoldenMasterTest {
     }
 
     @Test
-    public void shouldNotThrowWithMultipleFiles(){
+    public void shouldNotThrowWithMultipleFiles() {
         GoldenMasters.verify("Works the first time", "first");
         GoldenMasters.verify("Second time should also work fine", "second");
     }
 
     @Test
-    public void test(){
+    public void test() {
         GoldenMasters.verify("Should open reporter how does this look?");
+    }
+
+    @Test
+    public void testMultiSection() {
+        try (MultiSectionGoldenMaster master = GoldenMaster
+                .defaultConfig()
+                .asMultiSectionVerifier()
+                .withFailAtEnd(false)) {
+            master.verify("Hello Steve", "greet the world");
+            master.verify("Howya doing?", "be polite");
+            master.verify("round three");
+        }
     }
 }
